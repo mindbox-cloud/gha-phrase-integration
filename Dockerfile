@@ -17,4 +17,4 @@ RUN dotnet publish "./LocalizationServiceIntegration/LocalizationServiceIntegrat
 FROM mcr.microsoft.com/dotnet/core/aspnet:3.1
 WORKDIR /app
 COPY --from=build /build/LocalizationServiceIntegration .
-CMD ["dotnet", "LocalizationServiceIntegration.dll"]
+ENTRYPOINT ["dotnet", "LocalizationServiceIntegration.dll", "/github/workspace"]
