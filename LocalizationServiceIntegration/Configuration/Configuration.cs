@@ -16,7 +16,7 @@ namespace LocalizationServiceIntegration
 			var configPath = Path.Combine(executionDirectory, "LocalizationServiceIntegrationConfig.json");
 			var result = JsonConvert.DeserializeObject<Configuration>(File.ReadAllText(configPath));
 
-			result.WorkingDirectory = Environment.GetEnvironmentVariable("GITHUB_WORKSPACE ") ?? "./";
+			result.WorkingDirectory = Environment.GetEnvironmentVariable("GITHUB_WORKSPACE") ?? "./";
 			
 			Console.WriteLine($"Working directory set to {result.WorkingDirectory}");
 			
