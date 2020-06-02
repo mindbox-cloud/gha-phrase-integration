@@ -8,16 +8,12 @@ namespace LocalizationServiceIntegration
 {
 	public class LocalizationDataManager
 	{
-		private readonly string _referenceLocaleName;
-		private readonly IDictionary<string, string> namespaceNameToNamespaceDirectoryMap = 
-			new Dictionary<string, string>();
+		private readonly IDictionary<string, string> namespaceNameToNamespaceDirectoryMap;
 
-		public LocalizationDataManager(string referenceLocaleName)
+		public LocalizationDataManager(string referenceLocaleName, string workingDirectory)
 		{
-			_referenceLocaleName = referenceLocaleName;
-
 			namespaceNameToNamespaceDirectoryMap = new Dictionary<string, string>(
-				GetNamespaceWithDirectory(_referenceLocaleName), StringComparer.InvariantCultureIgnoreCase);
+				GetNamespaceWithDirectory(referenceLocaleName, workingDirectory), StringComparer.InvariantCultureIgnoreCase);
 		}
 
 		public IEnumerable<LocalizationNamespace> GetNamespaces(string localeName)
@@ -35,9 +31,9 @@ namespace LocalizationServiceIntegration
 
 		private static readonly Regex FileNameRegex = new Regex(@"^(?<namespace>[^\.]+)\.(?<locale>[^\.]+)\.i18n$");
 
-		private IEnumerable<KeyValuePair<string, string>> GetNamespaceWithDirectory(string localeName)
+		private IEnumerable<KeyValuePair<string, string>> GetNamespaceWithDirectory(string localeName, string workingDirectory)
 		{
-			return Directory.EnumerateFiles("./", $"*.{localeName}.i18n.json", SearchOption.AllDirectories)
+			return Directory.EnumerateFiles(workingDirectory, $"*.{localeName}.i18n.json", SearchOption.AllDirectories)
 				.Where(filePath => !filePath.Contains("Tests"))
 				.Where(filePath => !filePath.Contains(@"Administration.Web\Content"))
 				.Where(filePath => !filePath.Contains(@"\bin\"))

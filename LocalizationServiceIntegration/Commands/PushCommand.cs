@@ -18,7 +18,7 @@ namespace LocalizationServiceIntegration
 		protected override void ExecuteCore()
 		{
 			var referenceLocale = Config.GetReferenceLocale();
-			var localizationDataManager = new LocalizationDataManager(referenceLocale.Name);
+			var localizationDataManager = new LocalizationDataManager(referenceLocale.Name, Config.WorkingDirectory);
 
 			var client = GetPhraseAppClient();
 

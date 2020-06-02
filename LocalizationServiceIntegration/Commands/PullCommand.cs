@@ -13,7 +13,7 @@ namespace LocalizationServiceIntegration
 
 		protected override void ExecuteCore()
 		{
-			var localizationDataManager = new LocalizationDataManager(Config.GetReferenceLocale().Name);
+			var localizationDataManager = new LocalizationDataManager(Config.GetReferenceLocale().Name, Config.WorkingDirectory);
 
 			foreach (var configLocale in Config.Locales)
 			{

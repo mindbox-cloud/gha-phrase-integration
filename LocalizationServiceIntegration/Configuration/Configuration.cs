@@ -16,6 +16,8 @@ namespace LocalizationServiceIntegration
 			var configPath = Path.Combine(executionDirectory, "LocalizationServiceIntegrationConfig.json");
 			var result = JsonConvert.DeserializeObject<Configuration>(File.ReadAllText(configPath));
 
+			result.WorkingDirectory = Environment.GetEnvironmentVariable("GITHUB_WORKSPACE ") ?? "./";
+			
 			var environmentPhraseAppToken = Environment.GetEnvironmentVariable("phraseAppToken");
 			if (environmentPhraseAppToken != null)
 				result.PhraseAppToken = environmentPhraseAppToken;
@@ -46,6 +48,8 @@ namespace LocalizationServiceIntegration
 		[DataMember(Name = "slackWebhookUrl")]
 		public string SlackWebhookUrl { get; set; }
 
+		public string WorkingDirectory { get; set; }
+		
 		public LocaleInfo GetReferenceLocale()
 		{
 			return Locales.Where(l => l.IsReference).Single();
