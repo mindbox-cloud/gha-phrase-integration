@@ -1,0 +1,14 @@
+﻿{
+	"projectId": "c76d741178a7a743567ccb4eaa4315eb",
+	"locales": [
+		{
+			"name": "ru-RU",
+			"id": "f8a2a666cc2f2b589856f54333cd93ac",
+			"isReference": "true"
+		},
+		{
+			"name": "en-US",
+			"id": "5be4f4bad7fc7f702f5044f2cb81515f"
+		}
+	]
+}

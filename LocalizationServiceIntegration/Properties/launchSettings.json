@@ -1,0 +1,9 @@
+{
+  "profiles": {
+    "LocalizationServiceIntegration": {
+      "commandName": "Project",
+      "commandLineArgs": "push",
+      "workingDirectory": "C:\\Work\\TrunkGitHub\\DirectCRM"
+    }
+  }
+}
