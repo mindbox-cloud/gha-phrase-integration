@@ -1,0 +1,6 @@
+# action.yml
+name: 'Phrase integration'
+description: 'Pushes and pulls mindbox i18n resources'
+runs:
+  using: 'docker'
+  image: 'Dockerfile'
