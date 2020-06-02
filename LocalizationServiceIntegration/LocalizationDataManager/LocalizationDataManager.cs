@@ -46,6 +46,7 @@ namespace LocalizationServiceIntegration
 
 					var directory = Path.GetDirectoryName(filePath);
 
+					Console.WriteLine($"Located namespace {namespaceName} in directory {directory}");
 					return new KeyValuePair<string, string>(namespaceName, directory);
 				});
 		}

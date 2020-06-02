@@ -18,6 +18,8 @@ namespace LocalizationServiceIntegration
 
 			result.WorkingDirectory = Environment.GetEnvironmentVariable("GITHUB_WORKSPACE ") ?? "./";
 			
+			Console.WriteLine($"Working directory set to {result.WorkingDirectory}");
+			
 			var environmentPhraseAppToken = Environment.GetEnvironmentVariable("phraseAppToken");
 			if (environmentPhraseAppToken != null)
 				result.PhraseAppToken = environmentPhraseAppToken;
