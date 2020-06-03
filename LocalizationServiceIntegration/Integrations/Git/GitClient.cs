@@ -33,7 +33,7 @@ namespace LocalizationServiceIntegration
 
 			if (!response.IsSuccessful)
 				throw new InvalidOperationException(
-					$"Github response is not OK! Response code: {response.StatusCode}, message: {response.ErrorMessage}");
+					$"Github response is not OK! Response code: {response.StatusCode}, message: {response.ErrorMessage}, content: {response.Content}");
 
 			return response;
 		}
