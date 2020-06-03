@@ -90,7 +90,7 @@ namespace LocalizationServiceIntegration
 
 		private string GetOAuthGitHubRepositoryLink()
 		{
-			return $"https://{_gitHubToken}:x-oauth-basic@github.com/mindbox-moscow/{_repositoryName}.git";
+			return $"https://{_gitHubToken}:x-oauth-basic@github.com/{_repositoryName}.git";
 		}
 
 		public CreatePullRequestResponse CreatePullRequest(string branchName)
