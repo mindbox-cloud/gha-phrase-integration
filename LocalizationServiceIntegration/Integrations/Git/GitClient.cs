@@ -84,6 +84,7 @@ namespace LocalizationServiceIntegration
 		{
 			ExecuteGitExeAndGetOutput("checkout", "-b", branchName);
 			ExecuteGitExeAndGetOutput("add", "-A");
+			ExecuteGitExeAndGetOutput("config", "--global", "user.email", "action-ci@mindbox.ru");
 			ExecuteGitExeAndGetOutput("commit", "-am", message);
 			ExecuteGitExeAndGetOutput("push", GetOAuthGitHubRepositoryLink(), branchName);
 		}
