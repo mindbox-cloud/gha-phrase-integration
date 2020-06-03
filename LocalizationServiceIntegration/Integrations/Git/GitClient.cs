@@ -192,7 +192,7 @@ namespace LocalizationServiceIntegration
 		}
 
 		public string GetPullRequestLink(string pullRequestNumber) => 
-			$"https://github.com/mindbox-moscow/{_repositoryName}/pull/{pullRequestNumber}";
+			$"https://github.com/{_repositoryName}/pull/{pullRequestNumber}";
 
 		public void DeleteBranch(string branchName)
 		{
