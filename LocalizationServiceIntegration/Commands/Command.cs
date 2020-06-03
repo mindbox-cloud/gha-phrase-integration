@@ -38,11 +38,7 @@ namespace LocalizationServiceIntegration
 
 		protected GitClient GetGitHubClient()
 		{
-			var repository = Arguments.Length > 0
-				? Arguments[0]
-				: null;
-
-			return new GitClient(Config.GitHubToken, repository);
+			return new GitClient(Config.GitHubToken, Config.Repository);
 		}
 
 		protected abstract void ExecuteCore();

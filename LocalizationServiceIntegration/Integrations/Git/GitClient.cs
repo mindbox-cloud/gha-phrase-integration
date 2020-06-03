@@ -11,7 +11,7 @@ namespace LocalizationServiceIntegration
 		private readonly string _repositoryName;
 		private readonly RestClient _client;
 
-		private const string RepositoryBaseUrl = "https://api.github.com/repos/mindbox-moscow/";
+		private const string RepositoryBaseUrl = "https://api.github.com/repos/";
 		private const string DefaultRepositoryName = "DirectCRM";
 
 		public GitClient(string gitHubToken, string repositoryName = null)

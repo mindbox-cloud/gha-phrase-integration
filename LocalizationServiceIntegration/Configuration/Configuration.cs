@@ -19,6 +19,9 @@ namespace LocalizationServiceIntegration
 			result.WorkingDirectory = Environment.GetEnvironmentVariable("GITHUB_WORKSPACE") ?? "./";
 			
 			Console.WriteLine($"Working directory set to {result.WorkingDirectory}");
+
+			result.Repository = Environment.GetEnvironmentVariable("GITHUB_REPOSITORY");
+			Console.WriteLine($"Repository set to {result.Repository}");
 			
 			var environmentPhraseAppToken = Environment.GetEnvironmentVariable("phraseAppToken");
 			if (environmentPhraseAppToken != null)
@@ -51,7 +54,8 @@ namespace LocalizationServiceIntegration
 		public string SlackWebhookUrl { get; set; }
 
 		public string WorkingDirectory { get; set; }
-		
+		public string Repository { get; set; }
+
 		public LocaleInfo GetReferenceLocale()
 		{
 			return Locales.Where(l => l.IsReference).Single();
