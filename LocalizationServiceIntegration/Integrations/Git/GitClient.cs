@@ -196,7 +196,7 @@ namespace LocalizationServiceIntegration
 
 		public void DeleteBranch(string branchName)
 		{
-			ExecuteGitExeAndGetOutput("push", GetOAuthGitHubRepositoryLink(), "--delete", branchName);
+			// ExecuteGitExeAndGetOutput("push", GetOAuthGitHubRepositoryLink(), "--delete", branchName);
 		}
 	}
 }
