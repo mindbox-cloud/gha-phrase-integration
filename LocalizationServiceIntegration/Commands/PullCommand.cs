@@ -1,4 +1,5 @@
 ﻿using System;
+using System.IO;
 using System.Threading;
 
 namespace LocalizationServiceIntegration
@@ -14,6 +15,7 @@ namespace LocalizationServiceIntegration
 		protected override void ExecuteCore()
 		{
 			var localizationDataManager = new LocalizationDataManager(Config.GetReferenceLocale().Name, Config.WorkingDirectory);
+			Directory.SetCurrentDirectory(Config.WorkingDirectory);
 
 			foreach (var configLocale in Config.Locales)
 			{
