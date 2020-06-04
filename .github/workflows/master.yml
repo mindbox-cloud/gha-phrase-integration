@@ -30,6 +30,7 @@ jobs:
         echo '${{ secrets.DOCKERHUB_REGISTRY_KEY }}' | docker login --username itmindbox --password-stdin
         docker push mindboxmoscow/${{ env.image }}:${{ github.sha }}
         docker push mindboxmoscow/${{ env.image }}:${{ steps.release-number.outputs.release-number }}
+        docker push mindboxmoscow/${{ env.image }}:latest
         
     - name: create github release
       id: create_release
