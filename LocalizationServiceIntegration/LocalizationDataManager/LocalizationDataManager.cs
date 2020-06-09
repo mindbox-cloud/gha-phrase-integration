@@ -34,11 +34,12 @@ namespace LocalizationServiceIntegration
 		private IEnumerable<KeyValuePair<string, string>> GetNamespaceWithDirectory(string localeName, string workingDirectory)
 		{
 			return Directory.EnumerateFiles(workingDirectory, $"*.{localeName}.i18n.json", SearchOption.AllDirectories)
+				.Select(filePath => filePath.Replace("\\", "/"))
 				.Where(filePath => !filePath.Contains("Tests"))
-				.Where(filePath => !filePath.Contains(@"Administration.Web\Content"))
-				.Where(filePath => !filePath.Contains(@"\bin\"))
-				.Where(filePath => !filePath.Contains(@"TestResults\"))
-				.Where(filePath => !filePath.Contains(@"IntegrationTestSources\"))
+				.Where(filePath => !filePath.Contains(@"Administration.Web/Content"))
+				.Where(filePath => !filePath.Contains(@"/bin/"))
+				.Where(filePath => !filePath.Contains(@"TestResults/"))
+				.Where(filePath => !filePath.Contains(@"IntegrationTestSources/"))
 				.Select(filePath =>
 				{
 					var fileName = Path.GetFileNameWithoutExtension(filePath);
