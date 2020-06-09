@@ -32,7 +32,7 @@ namespace LocalizationServiceIntegration
 			}
 
 			var branchName = $"LocalizationPull{DateTime.Now.Ticks}";
-			gitClient.CommitAllChangesToBranchAndPush(branchName, "Automatic commit for localization integration");
+			gitClient.CommitAllChangesToBranchAndPush(branchName, "fix: localization (automatic integration commit)");
 
 			string pullRequestNumber = null;
 			var isPullRequestMerged = false;
