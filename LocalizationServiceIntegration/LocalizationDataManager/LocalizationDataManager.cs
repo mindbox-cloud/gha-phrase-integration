@@ -40,6 +40,7 @@ namespace LocalizationServiceIntegration
 				.Where(filePath => !filePath.Contains(@"/bin/"))
 				.Where(filePath => !filePath.Contains(@"TestResults/"))
 				.Where(filePath => !filePath.Contains(@"IntegrationTestSources/"))
+				.Where(filePath => !filePath.Contains(@"/node_modules/"))
 				.Select(filePath =>
 				{
 					var fileName = Path.GetFileNameWithoutExtension(filePath);
