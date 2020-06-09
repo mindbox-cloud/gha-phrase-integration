@@ -39,13 +39,34 @@ namespace LocalizationServiceIntegration
 				sourceLocalizationData.Where(d => IsLocalizationKeyFromCurrentNamespace(d.Key)));
 
 			if (!currentNamespaceSourceData.Any())
+			{
+				Console.WriteLine($"No keys found for namespace {Name}");
 				return;
+			}
 
 			var currentNamespaceLocalData = GetCurrentNamespaceLocalData();
 
-			foreach (var sourceKeyValue in currentNamespaceSourceData)
+			foreach (var (key, value) in currentNamespaceSourceData)
 			{
-				currentNamespaceLocalData[sourceKeyValue.Key] = sourceKeyValue.Value.ProcessTemplateSyntax();
+				var newValue = value.ProcessTemplateSyntax();
+
+				if (currentNamespaceLocalData.TryGetValue(key, out var oldValue))
+				{
+					if (newValue != oldValue)
+					{
+						Console.WriteLine($"Replaced value for key {key}");
+						Console.WriteLine($"Previous: {oldValue}");
+						Console.WriteLine($"New: {newValue}");
+					}
+				}
+				else
+				{
+					Console.WriteLine($"Key {key} did not exist locally, added");
+					Console.WriteLine($"Value: {newValue}");
+				}
+
+
+				currentNamespaceLocalData[key] = newValue;
 			}
 
 			TryAddFileToProjectFile();
