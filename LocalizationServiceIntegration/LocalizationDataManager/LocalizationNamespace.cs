@@ -13,7 +13,8 @@ namespace LocalizationServiceIntegration
 	[DebuggerDisplay("{Name},{DataFilePath}")]
 	public class LocalizationNamespace
 	{
-		private const string LocalizationDirectoryRelativePath = @"Resources\Localization";
+		private readonly string localizationDirectoryRelativePath = Path.Combine("Resources", "Localization");
+		private const string LocalizationDirectoryRelativeConfigurationPath = @"Resources\Localization";
 
 		public LocalizationNamespace(string dataFilePath, string ns, string localeName)
 		{
@@ -114,7 +115,7 @@ namespace LocalizationServiceIntegration
 					new XElement(xmlns + "Content", 
 						new XAttribute(
 							"Include", 
-							$@"{LocalizationDirectoryRelativePath}\{Name}.{LocaleName}.i18n.json"),
+							$@"{LocalizationDirectoryRelativeConfigurationPath}\{Name}.{LocaleName}.i18n.json"),
 						new XElement(
 							xmlns + "CopyToOutputDirectory", 
 							"PreserveNewest"))));
@@ -126,12 +127,12 @@ namespace LocalizationServiceIntegration
 		{
 			var localizationDirectoryPath = Path.GetDirectoryName(DataFilePath);
 
-			if (!localizationDirectoryPath.EndsWith(LocalizationDirectoryRelativePath))
+			if (!localizationDirectoryPath.EndsWith(localizationDirectoryRelativePath))
 				throw new InvalidOperationException(
 					$"Localization directory path is not supported: {localizationDirectoryPath}");
 
 			var projectFilePathDirectoryPath =
-				localizationDirectoryPath.Replace(LocalizationDirectoryRelativePath, String.Empty);
+				localizationDirectoryPath.Replace(localizationDirectoryRelativePath, String.Empty);
 			var projectFiles = Directory.EnumerateFiles(projectFilePathDirectoryPath, "*.csproj").ToArray();
 
 			if (projectFiles.Length != 1)
