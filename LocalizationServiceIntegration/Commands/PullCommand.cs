@@ -7,7 +7,7 @@ namespace LocalizationServiceIntegration;
 
 public class PullCommand : ExecutableCommand
 {
-	public PullCommand(IntegrationConfiguration configuration) : base(configuration, "Pull", "Pulls localization from PhraseApp")
+	public PullCommand(IntegrationConfiguration configuration) : base(configuration, "pull", "Pulls localization from PhraseApp")
 	{
 	}
 

@@ -14,7 +14,7 @@ public class PushCommand : ExecutableCommand
 	private const int maxRemovedKeysCountToNotify = 10;
 
 	public PushCommand(IntegrationConfiguration configuration) : base(
-		configuration, "Push",
+		configuration, "push",
 		"Pushes localization from GitHub repository to PhraseApp"
 	)
 	{

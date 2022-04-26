@@ -14,10 +14,10 @@ public class LocalizationDataManager
 	{
 		"Tests",
 		Path.Join("Administration.Web", "Contents"),
-		$"{Path.PathSeparator}bin{Path.PathSeparator}",
-		$"TestResults{Path.PathSeparator}",
-		$"IntegrationTestSources{Path.PathSeparator}",
-		$"{Path.PathSeparator}node_modules{Path.PathSeparator}"
+		$"{Path.DirectorySeparatorChar}bin{Path.DirectorySeparatorChar}",
+		$"TestResults{Path.DirectorySeparatorChar}",
+		$"IntegrationTestSources{Path.DirectorySeparatorChar}",
+		$"{Path.DirectorySeparatorChar}node_modules{Path.DirectorySeparatorChar}"
 	};
 
 	private readonly IDictionary<string, string> namespaceNameToNamespaceDirectoryMap;

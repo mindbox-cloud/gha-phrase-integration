@@ -30,7 +30,7 @@ public record IntegrationConfiguration
 	public string RepositoryOwner { get; set; }
 	public string RepositoryName { get; set; }
 
-	public LocaleInfo GetReferenceLocale() => Locales.Where(l => l.IsReference).Single();
+	public LocaleInfo GetReferenceLocale() => Locales.Single(l => l.IsReference);
 
 	public static IntegrationConfiguration Load()
 	{

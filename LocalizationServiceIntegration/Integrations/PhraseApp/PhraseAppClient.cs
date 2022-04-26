@@ -21,11 +21,12 @@ public class PhraseAppClient : IDisposable
 #pragma warning disable CA2000 // Dispose objects before losing scope
 			new HttpClient
 			{
-				BaseAddress = new Uri("https://api.phraseapp.com/api/"),
-				DefaultRequestHeaders = {{"Authorization", $"token {apiKey}"}}
+				BaseAddress = new Uri("https://api.phrase.com/v2/")
 			}
 #pragma warning restore CA2000 // Dispose objects before losing scope
 		);
+
+		client.Headers.Add("Authorization", $"token {apiKey}");
 	}
 
 	public void Dispose() => client.Dispose();
@@ -39,7 +40,7 @@ public class PhraseAppClient : IDisposable
 		if (localeId == null)
 			throw new ArgumentNullException(nameof(localeId));
 
-		return await client.Request("v2", "projects", projectId, "locales", localeId, "download")
+		return await client.Request("projects", projectId, "locales", localeId, "download")
 			.SetQueryParam("file_format", "i18next")
 			.GetJsonAsync<Dictionary<string, string>>();
 	}
@@ -70,13 +71,13 @@ public class PhraseAppClient : IDisposable
 	}
 
 	public async Task RemoveKey(string key) =>
-		await client.Request("v2", "projects", projectId, "keys")
+		await client.Request("projects", projectId, "keys")
 			.SendJsonAsync(
 				HttpMethod.Delete, new {q = $"name:{key}"}
 			);
 
 	public async Task Wipe() =>
-		await client.Request("v2", "projects", projectId, "keys")
+		await client.Request("projects", projectId, "keys")
 			.WithHeader("Content-Type", "application/json")
 			.DeleteAsync();
 }

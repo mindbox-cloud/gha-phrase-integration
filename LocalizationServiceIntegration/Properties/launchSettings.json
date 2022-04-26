@@ -5,8 +5,7 @@
 			"commandLineArgs": "push",
 			"workingDirectory": "/Users/chumakova/Projects/billing/",
 			"environmentVariables": {
-				"GITHUB_REPOSITORY": "mindbox-moscow/billing",
-				"VSTS_AGENT_INPUT__PROJECTURL": ""
+				"GITHUB_REPOSITORY": "mindbox-moscow/billing"
 			}
 		}
 	}
