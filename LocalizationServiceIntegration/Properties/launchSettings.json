@@ -1,13 +1,13 @@
 {
-  "profiles": {
-    "LocalizationServiceIntegration": {
-      "commandName": "Project",
-      "commandLineArgs": "push",
-      "workingDirectory": "/Users/chumakova/Projects/billing/",
-      "environmentVariables": {
-        "GITHUB_REPOSITORY": "mindbox-moscow/billing",
-        "VSTS_AGENT_INPUT__PROJECTURL": ""
-      }
-    }
-  }
+	"profiles": {
+		"LocalizationServiceIntegration": {
+			"commandName": "Project",
+			"commandLineArgs": "push",
+			"workingDirectory": "/Users/chumakova/Projects/billing/",
+			"environmentVariables": {
+				"GITHUB_REPOSITORY": "mindbox-moscow/billing",
+				"VSTS_AGENT_INPUT__PROJECTURL": ""
+			}
+		}
+	}
 }

@@ -6,7 +6,9 @@ namespace LocalizationServiceIntegration;
 
 public class WipeCommand : ExecutableCommand
 {
-	public WipeCommand(IntegrationConfiguration configuration) : base(configuration, "Wipe", "Wipes all existing keys from PhraseApp")
+	public WipeCommand(IntegrationConfiguration configuration) : base(
+		configuration, "Wipe", "Wipes all existing keys from PhraseApp"
+	)
 	{
 	}
 

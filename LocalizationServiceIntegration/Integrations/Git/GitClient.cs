@@ -1,17 +1,17 @@
 ﻿using System;
 using System.Diagnostics;
 using System.Threading.Tasks;
-using Flurl;
+
 using Octokit;
 
 namespace LocalizationServiceIntegration;
 
 public class GitClient
 {
-	private readonly string gitHubToken;
-	private readonly string repositoryOwner;
-	private readonly string repositoryName;
 	private readonly GitHubClient client;
+	private readonly string gitHubToken;
+	private readonly string repositoryName;
+	private readonly string repositoryOwner;
 
 	public GitClient(string gitHubToken, string repositoryOwner, string repositoryName)
 	{
@@ -23,6 +23,27 @@ public class GitClient
 		{
 			Credentials = new Credentials(gitHubToken)
 		};
+	}
+
+	public void CommitAllChangesToBranchAndPush(string branchName, string message)
+	{
+		ExecuteGitExeAndGetOutput("checkout", "-b", branchName);
+		ExecuteGitExeAndGetOutput("add", "-A");
+		ExecuteGitExeAndGetOutput("config", "--global", "user.email", "action-ci@mindbox.ru");
+		ExecuteGitExeAndGetOutput("commit", "-am", message);
+		ExecuteGitExeAndGetOutput("push", GetOAuthGitHubRepositoryLink(), branchName);
+	}
+
+	public async Task CreatePullRequestAndAddAutoMergeLabel(string branchName)
+	{
+		var pullRequest = await client.PullRequest.Create(
+			repositoryOwner,
+			repositoryName,
+			new NewPullRequest($"Automatic pull request for branch {branchName}", branchName, "master")
+		);
+
+		await client.Issue.Labels
+			.AddToIssue(repositoryOwner, repositoryName, pullRequest.Number, new[] {"Merge when ready"});
 	}
 
 	private static string ExecuteGitExeAndGetOutput(params string[] parameters)
@@ -54,6 +75,8 @@ public class GitClient
 		return output;
 	}
 
+	private string GetOAuthGitHubRepositoryLink() => $"https://{gitHubToken}:x-oauth-basic@github.com/{repositoryName}.git";
+
 	public static bool HasChanges()
 	{
 		var result = ExecuteGitExeAndGetOutput("status");
@@ -66,32 +89,4 @@ public class GitClient
 
 		throw new InvalidOperationException("git status resulted with some not expected output");
 	}
-
-	public void CommitAllChangesToBranchAndPush(string branchName, string message)
-	{
-		ExecuteGitExeAndGetOutput("checkout", "-b", branchName);
-		ExecuteGitExeAndGetOutput("add", "-A");
-		ExecuteGitExeAndGetOutput("config", "--global", "user.email", "action-ci@mindbox.ru");
-		ExecuteGitExeAndGetOutput("commit", "-am", message);
-		ExecuteGitExeAndGetOutput("push", GetOAuthGitHubRepositoryLink(), branchName);
-	}
-
-	private string GetOAuthGitHubRepositoryLink()
-	{
-		return $"https://{gitHubToken}:x-oauth-basic@github.com/{repositoryName}.git";
-	}
-
-	public async Task CreatePullRequestAndAddAutoMergeLabel(string branchName)
-	{
-		var pullRequest = await client.PullRequest.Create(
-			repositoryOwner,
-			repositoryName,
-			new NewPullRequest($"Automatic pull request for branch {branchName}", branchName, "master"));
-
-		await client.Issue.Labels
-			.AddToIssue(repositoryOwner, repositoryName, pullRequest.Number, new[] {"Merge when ready"});
-	}
-
-	public string GetPullRequestLink(string pullRequestNumber) => "https://github.com"
-		.AppendPathSegments(repositoryOwner, repositoryName, "pull", pullRequestNumber);
 }

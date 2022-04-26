@@ -3,6 +3,7 @@ using System.IO;
 using System.Linq;
 using System.Reflection;
 using System.Runtime.Serialization;
+
 using Newtonsoft.Json;
 
 namespace LocalizationServiceIntegration;
@@ -10,6 +11,27 @@ namespace LocalizationServiceIntegration;
 [DataContract]
 public record IntegrationConfiguration
 {
+	[DataMember(Name = "projectId")]
+	public string ProjectId { get; set; }
+
+	[DataMember(Name = "phraseAppToken")]
+	public string PhraseAppToken { get; set; }
+
+	[DataMember(Name = "locales")]
+	public LocaleInfo[] Locales { get; set; }
+
+	[DataMember(Name = "gitHubToken")]
+	public string GitHubToken { get; set; }
+
+	[DataMember(Name = "slackWebhookUrl")]
+	public string SlackWebhookUrl { get; set; }
+
+	public string WorkingDirectory { get; set; }
+	public string RepositoryOwner { get; set; }
+	public string RepositoryName { get; set; }
+
+	public LocaleInfo GetReferenceLocale() => Locales.Where(l => l.IsReference).Single();
+
 	public static IntegrationConfiguration Load()
 	{
 		var executionDirectory = Path.GetDirectoryName(Assembly.GetExecutingAssembly().Location);
@@ -39,29 +61,5 @@ public record IntegrationConfiguration
 			result.SlackWebhookUrl = environmentSlackWebhookUrl;
 
 		return result;
-	}
-
-	[DataMember(Name = "projectId")]
-	public string ProjectId { get; set; }
-
-	[DataMember(Name = "phraseAppToken")]
-	public string PhraseAppToken { get; set; }
-
-	[DataMember(Name = "locales")]
-	public LocaleInfo[] Locales { get; set; }
-
-	[DataMember(Name = "gitHubToken")]
-	public string GitHubToken { get; set; }
-
-	[DataMember(Name = "slackWebhookUrl")]
-	public string SlackWebhookUrl { get; set; }
-
-	public string WorkingDirectory { get; set; }
-	public string RepositoryOwner { get; set; }
-	public string RepositoryName { get; set; }
-
-	public LocaleInfo GetReferenceLocale()
-	{
-		return Locales.Where(l => l.IsReference).Single();
 	}
 }

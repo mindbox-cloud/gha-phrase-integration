@@ -2,6 +2,7 @@
 using System.Collections.Generic;
 using System.Net.Http;
 using System.Threading.Tasks;
+
 using Flurl;
 using Flurl.Http;
 
@@ -9,8 +10,8 @@ namespace LocalizationServiceIntegration;
 
 public class PhraseAppClient : IDisposable
 {
-	private readonly string projectId;
 	private readonly IFlurlClient client;
+	private readonly string projectId;
 
 	public PhraseAppClient(string apiKey, string projectId)
 	{
@@ -27,13 +28,21 @@ public class PhraseAppClient : IDisposable
 		);
 	}
 
+	public void Dispose() => client.Dispose();
+
 	public static string GetKeyLink(string key) => "https://phraseapp.com"
 		.AppendPathSegments("accounts", "mindbox-ltd", "projects", "mindbox", "keys")
-		.SetQueryParams(new Dictionary<string, string>()
-		{
-			["utf8"] = "✓",
-			["translation_key_search[query]"] = key,
-		});
+		.SetQueryParams(new Dictionary<string, string> {["utf8"] = "✓", ["translation_key_search[query]"] = key});
+
+	public async Task<IReadOnlyDictionary<string, string>> Pull(string localeId)
+	{
+		if (localeId == null)
+			throw new ArgumentNullException(nameof(localeId));
+
+		return await client.Request("v2", "projects", projectId, "locales", localeId, "download")
+			.SetQueryParam("file_format", "i18next")
+			.GetJsonAsync<Dictionary<string, string>>();
+	}
 
 	public async Task Push(
 		string localeId,
@@ -60,36 +69,14 @@ public class PhraseAppClient : IDisposable
 			).PostMultipartAsync(content => content.AddFile("file", filePath));
 	}
 
-	public async Task<IReadOnlyDictionary<string, string>> Pull(string localeId)
-	{
-		if (localeId == null)
-			throw new ArgumentNullException(nameof(localeId));
-
-		return await client.Request("v2", "projects", projectId, "locales", localeId, "download")
-			.SetQueryParam("file_format", "i18next")
-			.GetJsonAsync<Dictionary<string, string>>();
-	}
-
-	public async Task RemoveKey(string key)
-	{
+	public async Task RemoveKey(string key) =>
 		await client.Request("v2", "projects", projectId, "keys")
 			.SendJsonAsync(
-				HttpMethod.Delete, new
-				{
-					q = $"name:{key}"
-				}
+				HttpMethod.Delete, new {q = $"name:{key}"}
 			);
-	}
 
-	public async Task Wipe()
-	{
+	public async Task Wipe() =>
 		await client.Request("v2", "projects", projectId, "keys")
 			.WithHeader("Content-Type", "application/json")
 			.DeleteAsync();
-	}
-
-	public void Dispose()
-	{
-		client.Dispose();
-	}
 }

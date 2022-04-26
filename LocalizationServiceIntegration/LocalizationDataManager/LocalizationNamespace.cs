@@ -7,6 +7,7 @@ using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 using System.Xml.Linq;
+
 using Newtonsoft.Json;
 
 namespace LocalizationServiceIntegration;
@@ -14,8 +15,8 @@ namespace LocalizationServiceIntegration;
 [DebuggerDisplay("{Name},{DataFilePath}")]
 public class LocalizationNamespace
 {
-	private readonly string localizationDirectoryRelativePath = Path.Combine("Resources", "Localization");
 	private const string LocalizationDirectoryRelativeConfigurationPath = @"Resources\Localization";
+	private readonly string localizationDirectoryRelativePath = Path.Combine("Resources", "Localization");
 
 	public LocalizationNamespace(string dataFilePath, string ns, string localeName)
 	{
@@ -28,21 +29,18 @@ public class LocalizationNamespace
 	public string Name { get; }
 	public string LocaleName { get; }
 
-	public bool DoesHaveData()
-	{
-		return File.Exists(DataFilePath);
-	}
-
 	public async Task ApplyNewTranslations(IReadOnlyDictionary<string, string> sourceLocalizationData)
 	{
 		Console.WriteLine($"Applying translations for {Name}: {DataFilePath}");
 
 		var currentNamespaceSourceData = new Dictionary<string, string>(
-			sourceLocalizationData.Where(d => IsLocalizationKeyFromCurrentNamespace(d.Key)));
+			sourceLocalizationData.Where(d => IsLocalizationKeyFromCurrentNamespace(d.Key))
+		);
 
 		if (!currentNamespaceSourceData.Any())
 		{
 			Console.WriteLine($"No keys found for namespace {Name}");
+
 			return;
 		}
 
@@ -76,16 +74,101 @@ public class LocalizationNamespace
 		await File.WriteAllTextAsync(
 			DataFilePath,
 			SerializeObject(currentNamespaceLocalData),
-			Encoding.UTF8);
+			Encoding.UTF8
+		);
+	}
+
+	public void CheckData()
+	{
+		var localData = GetCurrentNamespaceLocalData();
+
+		CheckKeys(localData);
+	}
+
+	private static void CheckKeys(Dictionary<string, string> localData)
+	{
+		var invalidKey = localData.Keys.Select(TryGetKeyParts).FirstOrDefault(x => x == null);
+
+		if (invalidKey != null)
+			throw new InvalidOperationException($"Key {invalidKey.Key} is invalid. Valid key is <namespace>:<key>.");
+	}
+
+	public bool DoesHaveData() => File.Exists(DataFilePath);
+
+	public IEnumerable<string> GetAddedKeys(IReadOnlyDictionary<string, string> referenceLocaleData)
+	{
+		var currentNamespaceLocalData = GetCurrentNamespaceLocalData();
+
+		var currentNamespaceSourceData = new Dictionary<string, string>(
+			referenceLocaleData.Where(d => IsLocalizationKeyFromCurrentNamespace(d.Key))
+		);
+
+		return currentNamespaceLocalData.Keys.Except(currentNamespaceSourceData.Keys);
+	}
+
+	private Dictionary<string, string> GetCurrentNamespaceLocalData()
+	{
+		if (!DoesHaveData())
+			return new Dictionary<string, string>();
+
+		return JsonConvert.DeserializeObject<Dictionary<string, string>>(
+			File.ReadAllText(DataFilePath)
+		);
+	}
+
+	private string GetProjectFilePath()
+	{
+		var localizationDirectoryPath = Path.GetDirectoryName(DataFilePath);
+
+		if (!localizationDirectoryPath.EndsWith(localizationDirectoryRelativePath))
+		{
+			throw new InvalidOperationException(
+				$"Localization directory path is not supported: {localizationDirectoryPath}"
+			);
+		}
+
+		var projectFilePathDirectoryPath =
+			localizationDirectoryPath.Replace(localizationDirectoryRelativePath, string.Empty);
+		var projectFiles = Directory.EnumerateFiles(projectFilePathDirectoryPath, "*.csproj").ToArray();
+
+		if (projectFiles.Length != 1)
+			throw new InvalidOperationException($"Cant find project file in a directory {projectFilePathDirectoryPath}");
+
+		var projectFilePath = projectFiles.Single();
+
+		return projectFilePath;
+	}
+
+	private bool IsFrontendNamespace() => DataFilePath.Contains("Frontend");
+
+	private bool IsLocalizationKeyFromCurrentNamespace(string localizationKey)
+	{
+		var keyParts = TryGetKeyParts(localizationKey);
+
+		if (keyParts == null)
+			throw new InvalidOperationException($"Key {localizationKey} is invalid. Valid key is <namespace>:<key>.");
+
+		return string.Equals(keyParts.Namespace, Name, StringComparison.InvariantCultureIgnoreCase);
+	}
+
+	public IEnumerable<string> RemovedKeys(IReadOnlyDictionary<string, string> referenceLocaleData)
+	{
+		var currentNamespaceSourceData = new Dictionary<string, string>(
+			referenceLocaleData.Where(d => IsLocalizationKeyFromCurrentNamespace(d.Key))
+		);
+
+		var currentNamespaceLocalData = GetCurrentNamespaceLocalData();
+
+		return currentNamespaceSourceData.Keys.Except(currentNamespaceLocalData.Keys);
 	}
 
 	public static string SerializeObject<T>(T value)
 	{
-		StringBuilder sb = new StringBuilder(256);
-		StringWriter sw = new StringWriter(sb, CultureInfo.InvariantCulture);
+		var sb = new StringBuilder(256);
+		var sw = new StringWriter(sb, CultureInfo.InvariantCulture);
 
 		var jsonSerializer = JsonSerializer.CreateDefault();
-		using (JsonTextWriter jsonWriter = new JsonTextWriter(sw))
+		using (var jsonWriter = new JsonTextWriter(sw))
 		{
 			jsonWriter.Formatting = Formatting.Indented;
 			jsonWriter.IndentChar = '\t';
@@ -112,105 +195,32 @@ public class LocalizationNamespace
 		var xmlns = document.Root.Name.Namespace;
 
 		document.Root.Add(
-			new XElement(xmlns + "ItemGroup",
-				new XElement(xmlns + "Content",
+			new XElement(
+				xmlns + "ItemGroup",
+				new XElement(
+					xmlns + "Content",
 					new XAttribute(
 						"Include",
-						$@"{LocalizationDirectoryRelativeConfigurationPath}\{Name}.{LocaleName}.i18n.json"),
+						$@"{LocalizationDirectoryRelativeConfigurationPath}\{Name}.{LocaleName}.i18n.json"
+					),
 					new XElement(
 						xmlns + "CopyToOutputDirectory",
-						"PreserveNewest"))));
+						"PreserveNewest"
+					)
+				)
+			)
+		);
 
 		document.Save(projectFilePath);
-	}
-
-	private string GetProjectFilePath()
-	{
-		var localizationDirectoryPath = Path.GetDirectoryName(DataFilePath);
-
-		if (!localizationDirectoryPath.EndsWith(localizationDirectoryRelativePath))
-			throw new InvalidOperationException(
-				$"Localization directory path is not supported: {localizationDirectoryPath}");
-
-		var projectFilePathDirectoryPath =
-			localizationDirectoryPath.Replace(localizationDirectoryRelativePath, String.Empty);
-		var projectFiles = Directory.EnumerateFiles(projectFilePathDirectoryPath, "*.csproj").ToArray();
-
-		if (projectFiles.Length != 1)
-			throw new InvalidOperationException($"Cant find project file in a directory {projectFilePathDirectoryPath}");
-
-		var projectFilePath = projectFiles.Single();
-		return projectFilePath;
-	}
-
-	private bool IsFrontendNamespace()
-	{
-		return DataFilePath.Contains("Frontend");
-	}
-
-	private Dictionary<string, string> GetCurrentNamespaceLocalData()
-	{
-		if (!DoesHaveData())
-			return new Dictionary<string, string>();
-
-		return JsonConvert.DeserializeObject<Dictionary<string, string>>(
-			File.ReadAllText(DataFilePath));
-	}
-
-	private bool IsLocalizationKeyFromCurrentNamespace(string localizationKey)
-	{
-		var keyParts = TryGetKeyParts(localizationKey);
-		if (keyParts == null)
-			throw new InvalidOperationException($"Key {localizationKey} is invalid. Valid key is <namespace>:<key>.");
-
-		return string.Equals(keyParts.Namespace, Name, StringComparison.InvariantCultureIgnoreCase);
 	}
 
 	private static LocalizationKey TryGetKeyParts(string key)
 	{
 		var splitKey = key.Split(':');
+
 		if (splitKey.Length != 2)
 			return null;
 
-		return new LocalizationKey
-		{
-			Namespace = splitKey[0],
-			Key = splitKey[1]
-		};
-	}
-
-	public void CheckData()
-	{
-		var localData = GetCurrentNamespaceLocalData();
-
-		CheckKeys(localData);
-	}
-
-	private static void CheckKeys(Dictionary<string, string> localData)
-	{
-		var invalidKey = localData.Keys.Select(TryGetKeyParts).FirstOrDefault(x => x == null);
-
-		if (invalidKey != null)
-			throw new InvalidOperationException($"Key {invalidKey.Key} is invalid. Valid key is <namespace>:<key>.");
-	}
-
-	public IEnumerable<string> GetAddedKeys(IReadOnlyDictionary<string, string> referenceLocaleData)
-	{
-		var currentNamespaceLocalData = GetCurrentNamespaceLocalData();
-
-		var currentNamespaceSourceData = new Dictionary<string, string>(
-			referenceLocaleData.Where(d => IsLocalizationKeyFromCurrentNamespace(d.Key)));
-
-		return currentNamespaceLocalData.Keys.Except(currentNamespaceSourceData.Keys);
-	}
-
-	public IEnumerable<string> RemovedKeys(IReadOnlyDictionary<string, string> referenceLocaleData)
-	{
-		var currentNamespaceSourceData = new Dictionary<string, string>(
-			referenceLocaleData.Where(d => IsLocalizationKeyFromCurrentNamespace(d.Key)));
-
-		var currentNamespaceLocalData = GetCurrentNamespaceLocalData();
-
-		return currentNamespaceSourceData.Keys.Except(currentNamespaceLocalData.Keys);
+		return new LocalizationKey {Namespace = splitKey[0], Key = splitKey[1]};
 	}
 }

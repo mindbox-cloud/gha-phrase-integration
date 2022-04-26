@@ -8,11 +8,14 @@ namespace LocalizationServiceIntegration;
 public class PullCommand : ExecutableCommand
 {
 	public PullCommand(IntegrationConfiguration configuration) : base(configuration, "Pull", "Pulls localization from PhraseApp")
-	{ }
-		
+	{
+	}
+
 	public override async Task Execute()
 	{
-		var localizationDataManager = new LocalizationDataManager(Configuration.GetReferenceLocale().Name, Configuration.WorkingDirectory);
+		var localizationDataManager = new LocalizationDataManager(
+			Configuration.GetReferenceLocale().Name, Configuration.WorkingDirectory
+		);
 		Directory.SetCurrentDirectory(Configuration.WorkingDirectory);
 
 		await Task.WhenAll(Configuration.Locales.Select(locale => PullForLocale(locale, localizationDataManager)));
@@ -23,6 +26,7 @@ public class PullCommand : ExecutableCommand
 		if (!hasChanges)
 		{
 			Console.WriteLine("There are no changes in translations, exiting");
+
 			return;
 		}
 

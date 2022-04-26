@@ -3,35 +3,21 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
+
 using Mindbox.Integrations.Slack;
 
 namespace LocalizationServiceIntegration;
 
 public class PushCommand : ExecutableCommand
 {
+	private const int maxAddedKeysCountToNotify = 10;
+	private const int maxRemovedKeysCountToNotify = 10;
+
 	public PushCommand(IntegrationConfiguration configuration) : base(
 		configuration, "Push",
 		"Pushes localization from GitHub repository to PhraseApp"
 	)
-	{ }
-
-	private const int maxAddedKeysCountToNotify = 10;
-	private const int maxRemovedKeysCountToNotify = 10;
-
-	public override async Task Execute()
 	{
-		var referenceLocale = Configuration.GetReferenceLocale();
-		var localizationDataManager = new LocalizationDataManager(referenceLocale.Name, Configuration.WorkingDirectory);
-
-		Console.WriteLine("Performing pull from phraseapp for diff check");
-		var referenceLocaleData = await PhraseAppClient.Pull(referenceLocale.Id);
-
-		var diffResult = CheckKeysDiff(localizationDataManager, referenceLocale, referenceLocaleData);
-
-		await RemoveKeys(diffResult.RemovedKeys);
-		NotifyAboutRemovedKeys(diffResult.RemovedKeys);
-		await PushKeys(localizationDataManager);
-		NotifyAboutNewKeys(diffResult.AddedKeys);
 	}
 
 	private static (IList<string> AddedKeys, IList<string> RemovedKeys) CheckKeysDiff(
@@ -55,56 +41,20 @@ public class PushCommand : ExecutableCommand
 		return (addedKeys, removedKeys);
 	}
 
-	private async Task PushKeys(LocalizationDataManager localizationDataManager)
+	public override async Task Execute()
 	{
-		await Task.WhenAll(Configuration.Locales.Select(locale => PushForLocale(locale, localizationDataManager)));
-	}
+		var referenceLocale = Configuration.GetReferenceLocale();
+		var localizationDataManager = new LocalizationDataManager(referenceLocale.Name, Configuration.WorkingDirectory);
 
-	private async Task RemoveKeys(IList<string> removedKeys)
-	{
-		Console.WriteLine("Removing keys: " + string.Join(", ", removedKeys));
+		Console.WriteLine("Performing pull from phraseapp for diff check");
+		var referenceLocaleData = await PhraseAppClient.Pull(referenceLocale.Id);
 
-		await Task.WhenAll(removedKeys.Select(PhraseAppClient.RemoveKey));
-	}
+		var diffResult = CheckKeysDiff(localizationDataManager, referenceLocale, referenceLocaleData);
 
-	private void NotifyAboutRemovedKeys(IEnumerable<string> removedKeys)
-	{
-		Console.WriteLine("Sending notification about removed keys");
-
-		var removedKeysCollection = removedKeys.ToList();
-		if (!removedKeysCollection.Any())
-			return;
-
-		var notificationMessageBuilder = new StringBuilder();
-
-		notificationMessageBuilder.AppendLine("*Из системы перевода удалены следующие ключи:*");
-
-		notificationMessageBuilder.AppendLine(
-			string.Join(
-				"\n",
-				removedKeysCollection
-					.Select(key =>
-					{
-						var keyLink = PhraseAppClient.GetKeyLink(key);
-
-						return $"<{keyLink}|{key}>";
-					})
-					.Take(maxRemovedKeysCountToNotify)));
-
-		if (removedKeysCollection.Count > maxRemovedKeysCountToNotify)
-		{
-			notificationMessageBuilder.AppendLine(
-				$"И ещё {removedKeysCollection.Count - maxRemovedKeysCountToNotify} ключей");
-		}
-
-		var slackClient = new SlackClient(Configuration.SlackWebhookUrl);
-
-		new SlackMessageBuilder(slackClient)
-			.AsUser("некачественныйперевод.рф")
-			.WithIcon(":flag-gb:")
-			.ToChannel("#new-translations")
-			.WithText(notificationMessageBuilder.ToString())
-			.Send();
+		await RemoveKeys(diffResult.RemovedKeys);
+		NotifyAboutRemovedKeys(diffResult.RemovedKeys);
+		await PushKeys(localizationDataManager);
+		NotifyAboutNewKeys(diffResult.AddedKeys);
 	}
 
 	private void NotifyAboutNewKeys(IEnumerable<string> addedKeys)
@@ -112,6 +62,7 @@ public class PushCommand : ExecutableCommand
 		Console.WriteLine("Sending notification about new keys");
 
 		var addedKeysCollection = addedKeys.ToList();
+
 		if (!addedKeysCollection.Any())
 			return;
 
@@ -123,13 +74,17 @@ public class PushCommand : ExecutableCommand
 			string.Join(
 				"\n",
 				addedKeysCollection
-					.Select(key =>
-					{
-						var keyLink = PhraseAppClient.GetKeyLink(key);
+					.Select(
+						key =>
+						{
+							var keyLink = PhraseAppClient.GetKeyLink(key);
 
-						return $"<{keyLink}|{key}>";
-					})
-					.Take(maxAddedKeysCountToNotify)));
+							return $"<{keyLink}|{key}>";
+						}
+					)
+					.Take(maxAddedKeysCountToNotify)
+			)
+		);
 
 		if (addedKeysCollection.Count > maxAddedKeysCountToNotify)
 		{
@@ -140,6 +95,52 @@ public class PushCommand : ExecutableCommand
 
 		new SlackMessageBuilder(slackClient)
 			.AsUser("качественныйперевод.рф")
+			.WithIcon(":flag-gb:")
+			.ToChannel("#new-translations")
+			.WithText(notificationMessageBuilder.ToString())
+			.Send();
+	}
+
+	private void NotifyAboutRemovedKeys(IEnumerable<string> removedKeys)
+	{
+		Console.WriteLine("Sending notification about removed keys");
+
+		var removedKeysCollection = removedKeys.ToList();
+
+		if (!removedKeysCollection.Any())
+			return;
+
+		var notificationMessageBuilder = new StringBuilder();
+
+		notificationMessageBuilder.AppendLine("*Из системы перевода удалены следующие ключи:*");
+
+		notificationMessageBuilder.AppendLine(
+			string.Join(
+				"\n",
+				removedKeysCollection
+					.Select(
+						key =>
+						{
+							var keyLink = PhraseAppClient.GetKeyLink(key);
+
+							return $"<{keyLink}|{key}>";
+						}
+					)
+					.Take(maxRemovedKeysCountToNotify)
+			)
+		);
+
+		if (removedKeysCollection.Count > maxRemovedKeysCountToNotify)
+		{
+			notificationMessageBuilder.AppendLine(
+				$"И ещё {removedKeysCollection.Count - maxRemovedKeysCountToNotify} ключей"
+			);
+		}
+
+		var slackClient = new SlackClient(Configuration.SlackWebhookUrl);
+
+		new SlackMessageBuilder(slackClient)
+			.AsUser("некачественныйперевод.рф")
 			.WithIcon(":flag-gb:")
 			.ToChannel("#new-translations")
 			.WithText(notificationMessageBuilder.ToString())
@@ -159,6 +160,7 @@ public class PushCommand : ExecutableCommand
 			if (!addedKeys.Any())
 			{
 				Console.WriteLine($"Nothing to push in namespace {namespaceToPush.Name}: {namespaceToPush.DataFilePath}");
+
 				continue;
 			}
 
@@ -169,7 +171,19 @@ public class PushCommand : ExecutableCommand
 			await PhraseAppClient.Push(
 				locale.Id,
 				namespaceToPush.Name,
-				namespaceToPush.DataFilePath);
+				namespaceToPush.DataFilePath
+			);
 		}
+	}
+
+	private async Task PushKeys(LocalizationDataManager localizationDataManager) => await Task.WhenAll(
+		Configuration.Locales.Select(locale => PushForLocale(locale, localizationDataManager))
+	);
+
+	private async Task RemoveKeys(IList<string> removedKeys)
+	{
+		Console.WriteLine("Removing keys: " + string.Join(", ", removedKeys));
+
+		await Task.WhenAll(removedKeys.Select(PhraseAppClient.RemoveKey));
 	}
 }
