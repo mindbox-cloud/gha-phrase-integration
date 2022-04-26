@@ -1,123 +1,44 @@
 ﻿using System;
 using System.IO;
-using System.Threading;
+using System.Linq;
+using System.Threading.Tasks;
 
-namespace LocalizationServiceIntegration
+namespace LocalizationServiceIntegration;
+
+public class PullCommand : ExecutableCommand
 {
-	public class PullCommand : Command
+	public PullCommand(Configuration configuration) : base(configuration, "Pull", "Pulls localization from PhraseApp")
+	{ }
+		
+	public override async Task Execute()
 	{
-		private const int TotalWaitsLimit = 50;
+		var localizationDataManager = new LocalizationDataManager(Configuration.GetReferenceLocale().Name, Configuration.WorkingDirectory);
+		Directory.SetCurrentDirectory(Configuration.WorkingDirectory);
 
-		public PullCommand(string[] arguments) : base(arguments)
+		await Task.WhenAll(Configuration.Locales.Select(locale => PullForLocale(locale, localizationDataManager)));
+
+		var gitClient = new GitClient(Configuration.GitHubToken, Configuration.RepositoryOwner, Configuration.RepositoryName);
+
+		var hasChanges = gitClient.HasChanges();
+		if (!hasChanges)
 		{
+			Console.WriteLine("There are no changes in translations, exiting");
+			return;
 		}
 
-		protected override void ExecuteCore()
-		{
-			var localizationDataManager = new LocalizationDataManager(Config.GetReferenceLocale().Name, Config.WorkingDirectory);
-			Directory.SetCurrentDirectory(Config.WorkingDirectory);
+		var branchName = $"LocalizationPull{DateTime.Now.Ticks}";
+		gitClient.CommitAllChangesToBranchAndPush(branchName, "fix: localization (automatic integration commit)");
 
-			foreach (var configLocale in Config.Locales)
-			{
-				PullForLocale(configLocale, localizationDataManager);
-			}
+		await gitClient.CreatePullRequestAndAddAutoMergeLabel(branchName);
+	}
 
-			var gitClient = GetGitHubClient();
+	private async Task PullForLocale(LocaleInfo locale, LocalizationDataManager localizationDataManager)
+	{
+		var sourceLocalizationData = await PhraseAppClient.Pull(locale.Id);
 
-			var hasChanges = gitClient.HasChanges();
-			if (!hasChanges)
-			{
-				Console.WriteLine("There are no changes in translations, exiting");
-				return;
-			}
-
-			var branchName = $"LocalizationPull{DateTime.Now.Ticks}";
-			gitClient.CommitAllChangesToBranchAndPush(branchName, "fix: localization (automatic integration commit)");
-
-			string pullRequestNumber = null;
-			var isPullRequestMerged = false;
-
-			var waitCount = 0;
-
-			try
-			{
-				var createPullRequestResponse = gitClient.CreatePullRequest(branchName);
-				pullRequestNumber = createPullRequestResponse.Number;
-
-				while (true)
-				{
-					var pullRequestStatus = gitClient.GetPullRequestStatus(createPullRequestResponse);
-
-					var shouldWait = ProcessPullRequestStatusAndGetShouldWait(
-						gitClient, 
-						pullRequestStatus, 
-						createPullRequestResponse.Number,
-						createPullRequestResponse.Head.Sha);
-
-					if (!shouldWait)
-					{
-						isPullRequestMerged = true;
-						break;
-					}
-
-					if (waitCount > TotalWaitsLimit)
-						throw new InvalidOperationException(
-							$"Have waited for {gitClient.GetPullRequestLink(pullRequestNumber)} for too long");
-
-					waitCount++;
-					Thread.Sleep(TimeSpan.FromMinutes(1));
-				}
-			}
-			finally
-			{
-				if (pullRequestNumber != null && !isPullRequestMerged)
-				{
-					gitClient.ClosePullRequest(pullRequestNumber);
-				}
-
-				gitClient.DeleteBranch(branchName);
-			}
-		}
-
-		private bool ProcessPullRequestStatusAndGetShouldWait(
-			GitClient client, 
-			PullRequestStatus pullRequestStatus,
-			string pullRequestNumber,
-			string sha)
-		{
-			var pullRequestLink = client.GetPullRequestLink(pullRequestNumber);
-
-			switch (pullRequestStatus)
-			{
-				case PullRequestStatus.InProcess:
-					Console.WriteLine($"Pull request {pullRequestLink} is in process, waiting.");
-					return true;
-
-				case PullRequestStatus.CanBeMerged:
-					client.Merge(pullRequestNumber, sha);
-					Console.WriteLine($"Pull request {pullRequestLink} merged.");
-					return false;
-
-				case PullRequestStatus.Merged:
-					// Видимо мы замержили его руками, всё ок
-					return false;
-
-				default:
-					throw new InvalidOperationException(
-						$"Can't merge pull request {pullRequestLink} with status {pullRequestStatus}");
-			}
-		}
-
-		private void PullForLocale(LocaleInfo locale, LocalizationDataManager localizationDataManager)
-		{
-			var client = GetPhraseAppClient();
-			
-			var sourceLocalizationData = client.Pull(locale.Id);
-			
-			foreach (var namespaceInfo in localizationDataManager.GetNamespaces(locale.Name))
-			{
-				namespaceInfo.ApplyNewTranslations(sourceLocalizationData);
-			}
-		}
+		await Task.WhenAll(
+			localizationDataManager.GetNamespaces(locale.Name)
+				.Select(namespaceInfo => namespaceInfo.ApplyNewTranslations(sourceLocalizationData))
+		);
 	}
 }

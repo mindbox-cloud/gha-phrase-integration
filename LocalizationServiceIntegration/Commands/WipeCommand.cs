@@ -1,27 +1,23 @@
 ﻿using System;
+using System.Linq;
+using System.Threading.Tasks;
 
-namespace LocalizationServiceIntegration
+namespace LocalizationServiceIntegration;
+
+public class WipeCommand : ExecutableCommand
 {
-	public class WipeCommand : Command
+	public WipeCommand(Configuration configuration) : base(configuration, "Wipe", "Wipes all existing keys from PhraseApp")
 	{
-		public WipeCommand(string[] arguments) : base(arguments)
-		{
-		}
+	}
 
-		protected override void ExecuteCore()
-		{
-			Console.WriteLine("Are you sure you wanna wipe all the keys from phraseapp? Say \"y\" if you do.");
-			var answer = Console.ReadLine();
+	public override async Task Execute()
+	{
+		Console.WriteLine("Are you sure you wanna wipe all the keys from phraseapp? Say \"y\" if you do.");
+		var answer = Console.ReadLine();
 
-			if (answer != "y")
-				return;
+		if (answer?.ToUpperInvariant() == "Y")
+			return;
 
-			var client = GetPhraseAppClient();
-
-			foreach (var configLocale in Config.Locales)
-			{
-				client.Wipe(configLocale.Id);
-			}
-		}
+		await Task.WhenAll(Configuration.Locales.Select(locale => PhraseAppClient.Wipe(locale.Id)));
 	}
 }
