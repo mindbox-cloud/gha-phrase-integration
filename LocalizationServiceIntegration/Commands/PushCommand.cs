@@ -9,7 +9,7 @@ namespace LocalizationServiceIntegration;
 
 public class PushCommand : ExecutableCommand
 {
-	public PushCommand(Configuration configuration) : base(
+	public PushCommand(IntegrationConfiguration configuration) : base(
 		configuration, "Push",
 		"Pushes localization from GitHub repository to PhraseApp"
 	)
@@ -35,7 +35,7 @@ public class PushCommand : ExecutableCommand
 	}
 
 	private static (IList<string> AddedKeys, IList<string> RemovedKeys) CheckKeysDiff(
-		LocalizationDataManager localizationDataManager, 
+		LocalizationDataManager localizationDataManager,
 		LocaleInfo locale,
 		IReadOnlyDictionary<string, string> localeData)
 	{
@@ -72,7 +72,7 @@ public class PushCommand : ExecutableCommand
 		Console.WriteLine("Sending notification about removed keys");
 
 		var removedKeysCollection = removedKeys.ToList();
-		if (!removedKeysCollection.Any()) 
+		if (!removedKeysCollection.Any())
 			return;
 
 		var notificationMessageBuilder = new StringBuilder();
@@ -81,12 +81,12 @@ public class PushCommand : ExecutableCommand
 
 		notificationMessageBuilder.AppendLine(
 			string.Join(
-				"\n", 
+				"\n",
 				removedKeysCollection
 					.Select(key =>
 					{
 						var keyLink = PhraseAppClient.GetKeyLink(key);
-								
+
 						return $"<{keyLink}|{key}>";
 					})
 					.Take(maxRemovedKeysCountToNotify)));
@@ -112,7 +112,7 @@ public class PushCommand : ExecutableCommand
 		Console.WriteLine("Sending notification about new keys");
 
 		var addedKeysCollection = addedKeys.ToList();
-		if (!addedKeysCollection.Any()) 
+		if (!addedKeysCollection.Any())
 			return;
 
 		var notificationMessageBuilder = new StringBuilder();
@@ -121,12 +121,12 @@ public class PushCommand : ExecutableCommand
 
 		notificationMessageBuilder.AppendLine(
 			string.Join(
-				"\n", 
+				"\n",
 				addedKeysCollection
 					.Select(key =>
 					{
 						var keyLink = PhraseAppClient.GetKeyLink(key);
-								
+
 						return $"<{keyLink}|{key}>";
 					})
 					.Take(maxAddedKeysCountToNotify)));

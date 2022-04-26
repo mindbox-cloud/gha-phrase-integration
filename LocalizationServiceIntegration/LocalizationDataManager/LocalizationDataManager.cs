@@ -10,6 +10,16 @@ public class LocalizationDataManager
 {
 	private readonly IDictionary<string, string> namespaceNameToNamespaceDirectoryMap;
 
+	private readonly List<string> forbiddenPaths = new()
+	{
+		"Tests",
+		Path.Join("Administration.Web", "Contents"),
+		$"{Path.PathSeparator}bin{Path.PathSeparator}",
+		$"TestResults{Path.PathSeparator}",
+		$"IntegrationTestSources{Path.PathSeparator}",
+		$"{Path.PathSeparator}node_modules{Path.PathSeparator}"
+	};
+
 	public LocalizationDataManager(string referenceLocaleName, string workingDirectory)
 	{
 		namespaceNameToNamespaceDirectoryMap = new Dictionary<string, string>(
@@ -34,13 +44,7 @@ public class LocalizationDataManager
 	private IEnumerable<KeyValuePair<string, string>> GetNamespaceWithDirectory(string localeName, string workingDirectory)
 	{
 		return Directory.EnumerateFiles(workingDirectory, $"*.{localeName}.i18n.json", SearchOption.AllDirectories)
-			.Select(filePath => filePath.Replace("\\", "/"))
-			.Where(filePath => !filePath.Contains("Tests"))
-			.Where(filePath => !filePath.Contains(@"Administration.Web/Content"))
-			.Where(filePath => !filePath.Contains(@"/bin/"))
-			.Where(filePath => !filePath.Contains(@"TestResults/"))
-			.Where(filePath => !filePath.Contains(@"IntegrationTestSources/"))
-			.Where(filePath => !filePath.Contains(@"/node_modules/"))
+			.Where(filePath => forbiddenPaths.Select(filePath.Contains).All(result => !result))
 			.Select(filePath =>
 			{
 				var fileName = Path.GetFileNameWithoutExtension(filePath);

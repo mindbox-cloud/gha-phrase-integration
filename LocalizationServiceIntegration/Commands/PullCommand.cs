@@ -7,7 +7,7 @@ namespace LocalizationServiceIntegration;
 
 public class PullCommand : ExecutableCommand
 {
-	public PullCommand(Configuration configuration) : base(configuration, "Pull", "Pulls localization from PhraseApp")
+	public PullCommand(IntegrationConfiguration configuration) : base(configuration, "Pull", "Pulls localization from PhraseApp")
 	{ }
 		
 	public override async Task Execute()
@@ -19,7 +19,7 @@ public class PullCommand : ExecutableCommand
 
 		var gitClient = new GitClient(Configuration.GitHubToken, Configuration.RepositoryOwner, Configuration.RepositoryName);
 
-		var hasChanges = gitClient.HasChanges();
+		var hasChanges = GitClient.HasChanges();
 		if (!hasChanges)
 		{
 			Console.WriteLine("There are no changes in translations, exiting");

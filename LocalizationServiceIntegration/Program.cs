@@ -7,7 +7,7 @@ public static class Program
 {
 	private static async Task Main(string[] args)
 	{
-		var config = Configuration.Load();
+		var config = IntegrationConfiguration.Load();
 
 		var rootCommand = new RootCommand("Localization Service Integration");
 		var commands = new ExecutableCommand[]

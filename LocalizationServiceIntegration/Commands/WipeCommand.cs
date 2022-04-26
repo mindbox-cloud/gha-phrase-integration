@@ -6,7 +6,7 @@ namespace LocalizationServiceIntegration;
 
 public class WipeCommand : ExecutableCommand
 {
-	public WipeCommand(Configuration configuration) : base(configuration, "Wipe", "Wipes all existing keys from PhraseApp")
+	public WipeCommand(IntegrationConfiguration configuration) : base(configuration, "Wipe", "Wipes all existing keys from PhraseApp")
 	{
 	}
 
@@ -18,6 +18,6 @@ public class WipeCommand : ExecutableCommand
 		if (answer?.ToUpperInvariant() == "Y")
 			return;
 
-		await Task.WhenAll(Configuration.Locales.Select(locale => PhraseAppClient.Wipe(locale.Id)));
+		await Task.WhenAll(Configuration.Locales.Select(locale => PhraseAppClient.Wipe()));
 	}
 }

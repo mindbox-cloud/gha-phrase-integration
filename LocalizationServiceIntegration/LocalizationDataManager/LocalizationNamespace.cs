@@ -74,8 +74,8 @@ public class LocalizationNamespace
 		TryAddFileToProjectFile();
 
 		await File.WriteAllTextAsync(
-			DataFilePath, 
-			SerializeObject(currentNamespaceLocalData), 
+			DataFilePath,
+			SerializeObject(currentNamespaceLocalData),
 			Encoding.UTF8);
 	}
 
@@ -113,12 +113,12 @@ public class LocalizationNamespace
 
 		document.Root.Add(
 			new XElement(xmlns + "ItemGroup",
-				new XElement(xmlns + "Content", 
+				new XElement(xmlns + "Content",
 					new XAttribute(
-						"Include", 
+						"Include",
 						$@"{LocalizationDirectoryRelativeConfigurationPath}\{Name}.{LocaleName}.i18n.json"),
 					new XElement(
-						xmlns + "CopyToOutputDirectory", 
+						xmlns + "CopyToOutputDirectory",
 						"PreserveNewest"))));
 
 		document.Save(projectFilePath);
@@ -186,13 +186,12 @@ public class LocalizationNamespace
 		CheckKeys(localData);
 	}
 
-	private void CheckKeys(Dictionary<string, string> localData)
+	private static void CheckKeys(Dictionary<string, string> localData)
 	{
-		foreach (var localDataKey in localData.Keys)
-		{
-			if (TryGetKeyParts(localDataKey) == null)
-				throw new InvalidOperationException($"Key {localDataKey} is invalid. Valid key is <namespace>:<key>.");
-		}
+		var invalidKey = localData.Keys.Select(TryGetKeyParts).FirstOrDefault(x => x == null);
+
+		if (invalidKey != null)
+			throw new InvalidOperationException($"Key {invalidKey.Key} is invalid. Valid key is <namespace>:<key>.");
 	}
 
 	public IEnumerable<string> GetAddedKeys(IReadOnlyDictionary<string, string> referenceLocaleData)

@@ -8,16 +8,16 @@ using Newtonsoft.Json;
 namespace LocalizationServiceIntegration;
 
 [DataContract]
-public record Configuration
+public record IntegrationConfiguration
 {
-	public static Configuration Load()
+	public static IntegrationConfiguration Load()
 	{
 		var executionDirectory = Path.GetDirectoryName(Assembly.GetExecutingAssembly().Location);
 		var configPath = Path.Combine(executionDirectory, "LocalizationServiceIntegrationConfig.json");
-		var result = JsonConvert.DeserializeObject<Configuration>(File.ReadAllText(configPath));
+		var result = JsonConvert.DeserializeObject<IntegrationConfiguration>(File.ReadAllText(configPath));
 
 		result.WorkingDirectory = Environment.GetEnvironmentVariable("GITHUB_WORKSPACE") ?? "./";
-			
+
 		Console.WriteLine($"Working directory set to {result.WorkingDirectory}");
 
 		var repositorySegments = Environment.GetEnvironmentVariable("GITHUB_REPOSITORY").Split('/');
@@ -25,7 +25,7 @@ public record Configuration
 		result.RepositoryName = repositorySegments[1];
 
 		Console.WriteLine($"Repository set to {result.RepositoryOwner}/{result.RepositoryName}");
-			
+
 		var environmentPhraseAppToken = Environment.GetEnvironmentVariable("phraseAppToken");
 		if (environmentPhraseAppToken != null)
 			result.PhraseAppToken = environmentPhraseAppToken;

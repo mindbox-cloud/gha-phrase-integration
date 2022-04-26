@@ -7,27 +7,27 @@ using Flurl.Http;
 
 namespace LocalizationServiceIntegration;
 
-public class PhraseAppClient
+public class PhraseAppClient : IDisposable
 {
-	private readonly string _apiKey;
-	private readonly string _projectId;
-	private readonly IFlurlClient _client;
+	private readonly string projectId;
+	private readonly IFlurlClient client;
 
 	public PhraseAppClient(string apiKey, string projectId)
 	{
-		_apiKey = apiKey;
-		_projectId = projectId;
+		this.projectId = projectId;
 
-		_client = new FlurlClient(
+		client = new FlurlClient(
+#pragma warning disable CA2000 // Dispose objects before losing scope
 			new HttpClient
 			{
 				BaseAddress = new Uri("https://api.phraseapp.com/api/"),
-				DefaultRequestHeaders = {{"Authorization", $"token {_apiKey}"}}
+				DefaultRequestHeaders = {{"Authorization", $"token {apiKey}"}}
 			}
+#pragma warning restore CA2000 // Dispose objects before losing scope
 		);
 	}
 
-	public string GetKeyLink(string key) => "https://phraseapp.com"
+	public static string GetKeyLink(string key) => "https://phraseapp.com"
 		.AppendPathSegments("accounts", "mindbox-ltd", "projects", "mindbox", "keys")
 		.SetQueryParams(new Dictionary<string, string>()
 		{
@@ -42,12 +42,12 @@ public class PhraseAppClient
 	{
 		if (localeId == null)
 			throw new ArgumentNullException(nameof(localeId));
-		if (tag == null) 
+		if (tag == null)
 			throw new ArgumentNullException(nameof(tag));
-		if (filePath == null) 
+		if (filePath == null)
 			throw new ArgumentNullException(nameof(filePath));
 
-		await _client.Request("projects", _projectId, "uploads")
+		await client.Request("projects", projectId, "uploads")
 			.SetQueryParams(
 				new
 				{
@@ -65,14 +65,14 @@ public class PhraseAppClient
 		if (localeId == null)
 			throw new ArgumentNullException(nameof(localeId));
 
-		return await _client.Request("v2", "projects", _projectId, "locales", localeId, "download")
+		return await client.Request("v2", "projects", projectId, "locales", localeId, "download")
 			.SetQueryParam("file_format", "i18next")
 			.GetJsonAsync<Dictionary<string, string>>();
 	}
 
 	public async Task RemoveKey(string key)
 	{
-		await _client.Request("v2", "projects", _projectId, "keys")
+		await client.Request("v2", "projects", projectId, "keys")
 			.SendJsonAsync(
 				HttpMethod.Delete, new
 				{
@@ -81,10 +81,15 @@ public class PhraseAppClient
 			);
 	}
 
-	public async Task Wipe(string localeId)
+	public async Task Wipe()
 	{
-		await _client.Request("v2", "projects", _projectId, "keys")
+		await client.Request("v2", "projects", projectId, "keys")
 			.WithHeader("Content-Type", "application/json")
 			.DeleteAsync();
+	}
+
+	public void Dispose()
+	{
+		client.Dispose();
 	}
 }

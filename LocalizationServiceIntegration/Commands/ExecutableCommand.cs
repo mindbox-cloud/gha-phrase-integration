@@ -1,3 +1,4 @@
+using System;
 using System.CommandLine;
 using System.Threading.Tasks;
 
@@ -5,12 +6,12 @@ namespace LocalizationServiceIntegration;
 
 public abstract class ExecutableCommand : Command
 {
-	protected Configuration Configuration { get; }
+	protected IntegrationConfiguration Configuration { get; }
 	protected PhraseAppClient PhraseAppClient { get; }
 
-	protected ExecutableCommand(Configuration configuration, string name, string description) : base(name, description)
+	protected ExecutableCommand(IntegrationConfiguration configuration, string name, string description) : base(name, description)
 	{
-		Configuration = configuration;
+		Configuration = configuration ?? throw new ArgumentNullException(nameof(configuration));
 		PhraseAppClient = new PhraseAppClient(configuration.PhraseAppToken, configuration.ProjectId);
 	}
 

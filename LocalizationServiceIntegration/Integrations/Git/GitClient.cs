@@ -18,19 +18,19 @@ public class GitClient
 		this.gitHubToken = gitHubToken;
 		this.repositoryOwner = repositoryOwner;
 		this.repositoryName = repositoryName;
-			
+
 		client = new GitHubClient(new ProductHeaderValue("LocalizationServiceIntegration"))
 		{
 			Credentials = new Credentials(gitHubToken)
 		};
 	}
-		
-	private string ExecuteGitExeAndGetOutput(params string[] parameters)
+
+	private static string ExecuteGitExeAndGetOutput(params string[] parameters)
 	{
 		var parametersString = string.Join(" ", parameters);
 		Console.WriteLine($"git {parametersString}");
 
-		var p = new Process();
+		using var p = new Process();
 
 		p.StartInfo.UseShellExecute = false;
 		p.StartInfo.RedirectStandardOutput = true;
@@ -40,9 +40,9 @@ public class GitClient
 		{
 			p.StartInfo.ArgumentList.Add(parameter);
 		}
-		
+
 		p.Start();
-		
+
 		var output = p.StandardOutput.ReadToEnd();
 		var errors = p.StandardError.ReadToEnd();
 
@@ -54,7 +54,7 @@ public class GitClient
 		return output;
 	}
 
-	public bool HasChanges()
+	public static bool HasChanges()
 	{
 		var result = ExecuteGitExeAndGetOutput("status");
 
@@ -64,7 +64,7 @@ public class GitClient
 		if (result.Contains("Changes not staged for commit") || result.Contains("Untracked files"))
 			return true;
 
-		throw new InvalidOperationException($"git status resulted with some not expected output");
+		throw new InvalidOperationException("git status resulted with some not expected output");
 	}
 
 	public void CommitAllChangesToBranchAndPush(string branchName, string message)
