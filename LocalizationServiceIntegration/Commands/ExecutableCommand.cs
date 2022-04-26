@@ -10,10 +10,12 @@ public abstract class ExecutableCommand : Command
 	{
 		Configuration = configuration ?? throw new ArgumentNullException(nameof(configuration));
 		PhraseAppClient = new PhraseAppClient(configuration.PhraseAppToken, configuration.ProjectId);
+		GitClient = new GitClient(configuration.GitHubToken, configuration.RepositoryOwner, configuration.RepositoryName);
 	}
 
 	protected IntegrationConfiguration Configuration { get; }
 	protected PhraseAppClient PhraseAppClient { get; }
+	protected GitClient GitClient { get; }
 
 	public abstract Task Execute();
 }

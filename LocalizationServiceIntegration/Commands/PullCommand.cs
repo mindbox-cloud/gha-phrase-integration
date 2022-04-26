@@ -16,11 +16,10 @@ public class PullCommand : ExecutableCommand
 		var localizationDataManager = new LocalizationDataManager(
 			Configuration.GetReferenceLocale().Name, Configuration.WorkingDirectory
 		);
+
 		Directory.SetCurrentDirectory(Configuration.WorkingDirectory);
 
 		await Task.WhenAll(Configuration.Locales.Select(locale => PullForLocale(locale, localizationDataManager)));
-
-		var gitClient = new GitClient(Configuration.GitHubToken, Configuration.RepositoryOwner, Configuration.RepositoryName);
 
 		var hasChanges = GitClient.HasChanges();
 		if (!hasChanges)
@@ -30,10 +29,10 @@ public class PullCommand : ExecutableCommand
 			return;
 		}
 
-		var branchName = $"LocalizationPull{DateTime.Now.Ticks}";
-		gitClient.CommitAllChangesToBranchAndPush(branchName, "fix: localization (automatic integration commit)");
+		var branchName = GitClient.BranchPrefix + DateTime.Now.Ticks;
+		GitClient.CommitAllChangesToBranchAndPush(branchName, "fix: localization (automatic integration commit)");
 
-		await gitClient.CreatePullRequestAndAddAutoMergeLabel(branchName);
+		await GitClient.CreatePullRequestAndAddAutoMergeLabel(branchName);
 	}
 
 	private async Task PullForLocale(LocaleInfo locale, LocalizationDataManager localizationDataManager)

@@ -10,10 +10,10 @@
     </PropertyGroup>
     
     <ItemGroup>
-        <PackageReference Include="Flurl.Http" Version="3.2.3"/>
-        <PackageReference Include="Mindbox.Integrations.Slack" Version="4.1.0"/>
-        <PackageReference Include="Octokit" Version="0.50.0"/>
-        <PackageReference Include="System.CommandLine" Version="2.0.0-beta3.22114.1"/>
+        <PackageReference Include="Flurl.Http" Version="3.2.3" />
+        <PackageReference Include="Mindbox.Integrations.Slack" Version="4.1.0" />
+        <PackageReference Include="Octokit" Version="0.50.0" />
+        <PackageReference Include="System.CommandLine" Version="2.0.0-beta3.22114.1" />
     </ItemGroup>
 
     <ItemGroup>

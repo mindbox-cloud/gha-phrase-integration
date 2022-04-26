@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Diagnostics;
+using System.Linq;
 using System.Threading.Tasks;
 
 using Octokit;
@@ -8,6 +9,7 @@ namespace LocalizationServiceIntegration;
 
 public class GitClient
 {
+	public const string BranchPrefix = "LocalizationPull";
 	private readonly GitHubClient client;
 	private readonly string gitHubToken;
 	private readonly string repositoryName;
@@ -75,7 +77,27 @@ public class GitClient
 		return output;
 	}
 
-	private string GetOAuthGitHubRepositoryLink() => $"https://{gitHubToken}:x-oauth-basic@github.com/{repositoryName}.git";
+	public async Task CleanStalePullRequestsAndBranches()
+	{
+		var pullRequestsCloseTasks = (await client.PullRequest.GetAllForRepository(repositoryOwner, repositoryName))
+			.Where(pullRequest => pullRequest.State == ItemState.Open && pullRequest.Head.Ref.StartsWith(BranchPrefix))
+			.Select(
+				pullRequest => client.PullRequest.Update(
+					repositoryOwner, repositoryOwner, pullRequest.Number, new PullRequestUpdate {State = ItemState.Closed}
+				)
+			);
+
+		await Task.WhenAll(pullRequestsCloseTasks);
+
+		var branchesRemovalTasks = (await client.Repository.Branch.GetAll(repositoryOwner, repositoryName))
+			.Where(branch => branch.Name.StartsWith(BranchPrefix))
+			.Select(branch => client.Git.Reference.Delete(repositoryOwner, repositoryName, "heads/" + branch.Name));
+
+		await Task.WhenAll(branchesRemovalTasks);
+	}
+
+	private string GetOAuthGitHubRepositoryLink() =>
+		$"https://{gitHubToken}:x-oauth-basic@github.com/{repositoryOwner}/{repositoryName}.git";
 
 	public static bool HasChanges()
 	{

@@ -10,7 +10,10 @@ public static class Program
 		var config = IntegrationConfiguration.Load();
 
 		var rootCommand = new RootCommand("Localization Service Integration");
-		var commands = new ExecutableCommand[] {new PullCommand(config), new PushCommand(config), new WipeCommand(config)};
+		var commands = new ExecutableCommand[]
+		{
+			new PullCommand(config), new PushCommand(config), new WipeCommand(config), new CleanCommand(config)
+		};
 
 		foreach (var command in commands)
 		{
