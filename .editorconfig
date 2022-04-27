@@ -128,3 +128,6 @@ dotnet_diagnostic.CA1310.severity = none
 
 # CA1056: Uri properties should not be strings
 dotnet_diagnostic.CA1056.severity = none
+
+# CA1031: Do not catch general exception types
+dotnet_diagnostic.CA1031.severity = none

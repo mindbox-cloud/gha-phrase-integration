@@ -1,19 +1,28 @@
 ﻿using System;
+using System.Collections.Generic;
 using System.Diagnostics;
 using System.Linq;
 using System.Threading.Tasks;
 
 using Octokit;
+using Octokit.GraphQL;
+using Octokit.GraphQL.Model;
+
+using Connection = Octokit.GraphQL.Connection;
+using ProductHeaderValue = Octokit.ProductHeaderValue;
 
 namespace LocalizationServiceIntegration;
 
 public class GitClient
 {
 	public const string BranchPrefix = "LocalizationPull";
+	private const string commitEmail = "action-ci@mindbox.ru";
 	private readonly GitHubClient client;
+	private readonly Connection githubConnection;
 	private readonly string gitHubToken;
 	private readonly string repositoryName;
 	private readonly string repositoryOwner;
+	private readonly ICompiledQuery<string> pullRequestEnablingMutation;
 
 	public GitClient(string gitHubToken, string repositoryOwner, string repositoryName)
 	{
@@ -25,18 +34,23 @@ public class GitClient
 		{
 			Credentials = new Credentials(gitHubToken)
 		};
+
+		githubConnection = new Connection(new Octokit.GraphQL.ProductHeaderValue("productHeaderValue"), gitHubToken);
+		pullRequestEnablingMutation = new Mutation().EnablePullRequestAutoMerge(Variable.Var("pullRequest"))
+			.Select(x => x.ClientMutationId)
+			.Compile();
 	}
 
 	public void CommitAllChangesToBranchAndPush(string branchName, string message)
 	{
 		ExecuteGitExeAndGetOutput("checkout", "-b", branchName);
 		ExecuteGitExeAndGetOutput("add", "-A");
-		ExecuteGitExeAndGetOutput("config", "--global", "user.email", "action-ci@mindbox.ru");
+		ExecuteGitExeAndGetOutput("config", "--global", "user.email", commitEmail);
 		ExecuteGitExeAndGetOutput("commit", "-am", message);
 		ExecuteGitExeAndGetOutput("push", GetOAuthGitHubRepositoryLink(), branchName);
 	}
 
-	public async Task CreatePullRequestAndAddAutoMergeLabel(string branchName, string baseBranch)
+	public async Task CreatePullRequestWithAutoMerge(string branchName, string baseBranch)
 	{
 		var pullRequest = await client.PullRequest.Create(
 			repositoryOwner,
@@ -44,8 +58,34 @@ public class GitClient
 			new NewPullRequest($"Automatic pull request for branch {branchName}", branchName, baseBranch)
 		);
 
-		await client.Issue.Labels
-			.AddToIssue(repositoryOwner, repositoryName, pullRequest.Number, new[] {"Merge when ready"});
+		try
+		{
+			await client.Issue.Labels
+				.AddToIssue(repositoryOwner, repositoryName, pullRequest.Number, new[] {"Merge when ready"});
+		}
+		catch (Exception e)
+		{
+			Console.WriteLine("Failed to add label to pull request");
+			Console.WriteLine(e);
+		}
+
+		var variables = new Dictionary<string, object>
+		{
+			["pullRequest"] = new EnablePullRequestAutoMergeInput
+			{
+				AuthorEmail = commitEmail, PullRequestId = new ID(pullRequest.NodeId)
+			}
+		};
+
+		try
+		{
+			await githubConnection.Run(pullRequestEnablingMutation, variables);
+		}
+		catch (Exception e)
+		{
+			Console.WriteLine($"Failed to enable auto merge for pull request {pullRequest.Number}");
+			Console.WriteLine(e);
+		}
 	}
 
 	private static string ExecuteGitExeAndGetOutput(params string[] parameters)
@@ -79,17 +119,19 @@ public class GitClient
 
 	public async Task CleanStalePullRequestsAndBranches()
 	{
-		var pullRequestsCloseTasks = (await client.PullRequest.GetAllForRepository(repositoryOwner, repositoryName))
+		var pullRequests = await client.PullRequest.GetAllForRepository(repositoryOwner, repositoryName);
+		var pullRequestsCloseTasks = pullRequests
 			.Where(pullRequest => pullRequest.State == ItemState.Open && pullRequest.Head.Ref.StartsWith(BranchPrefix))
 			.Select(
 				pullRequest => client.PullRequest.Update(
-					repositoryOwner, repositoryOwner, pullRequest.Number, new PullRequestUpdate {State = ItemState.Closed}
+					repositoryOwner, repositoryName, pullRequest.Number, new PullRequestUpdate {State = ItemState.Closed}
 				)
 			);
 
 		await Task.WhenAll(pullRequestsCloseTasks);
 
-		var branchesRemovalTasks = (await client.Repository.Branch.GetAll(repositoryOwner, repositoryName))
+		var branches = await client.Repository.Branch.GetAll(repositoryOwner, repositoryName);
+		var branchesRemovalTasks = branches
 			.Where(branch => branch.Name.StartsWith(BranchPrefix))
 			.Select(branch => client.Git.Reference.Delete(repositoryOwner, repositoryName, "heads/" + branch.Name));
 

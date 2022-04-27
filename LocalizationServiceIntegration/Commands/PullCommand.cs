@@ -32,7 +32,7 @@ public class PullCommand : ExecutableCommand
 		var branchName = GitClient.BranchPrefix + DateTime.Now.Ticks;
 		GitClient.CommitAllChangesToBranchAndPush(branchName, "fix: localization (automatic integration commit)");
 
-		await GitClient.CreatePullRequestAndAddAutoMergeLabel(branchName, Configuration.BaseBranch);
+		await GitClient.CreatePullRequestWithAutoMerge(branchName, Configuration.BaseBranch);
 	}
 
 	private async Task PullForLocale(LocaleInfo locale, LocalizationDataManager localizationDataManager)

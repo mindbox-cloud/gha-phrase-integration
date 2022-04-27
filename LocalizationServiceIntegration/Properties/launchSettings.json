@@ -2,10 +2,14 @@
 	"profiles": {
 		"LocalizationServiceIntegration": {
 			"commandName": "Project",
-			"commandLineArgs": "push",
-			"workingDirectory": "/Users/chumakova/Projects/billing/",
+			"commandLineArgs": "pull",
+			"workingDirectory": "C:\\Work\\TrunkGitHub\\DirectCRM",
 			"environmentVariables": {
-				"GITHUB_REPOSITORY": "mindbox-moscow/billing"
+				"GITHUB_REPOSITORY": "mindbox-moscow/DirectCRM",
+				"gitHubToken": "token",
+				"slackWebhookUrl": "webhook",
+				"phraseAppToken": "phraseapp",
+				"baseBranch": "master"
 			}
 		}
 	}
