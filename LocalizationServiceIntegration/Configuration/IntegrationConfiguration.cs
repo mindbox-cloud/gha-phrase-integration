@@ -26,6 +26,7 @@ public record IntegrationConfiguration
 	[DataMember(Name = "slackWebhookUrl")]
 	public string SlackWebhookUrl { get; set; }
 
+	public string BaseBranch { get; set; }
 	public string WorkingDirectory { get; set; }
 	public string RepositoryOwner { get; set; }
 	public string RepositoryName { get; set; }
@@ -59,6 +60,8 @@ public record IntegrationConfiguration
 		var environmentSlackWebhookUrl = Environment.GetEnvironmentVariable("slackWebhookUrl");
 		if (environmentSlackWebhookUrl != null)
 			result.SlackWebhookUrl = environmentSlackWebhookUrl;
+
+		result.BaseBranch = Environment.GetEnvironmentVariable("baseBranch") ?? "master";
 
 		return result;
 	}

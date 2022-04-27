@@ -36,12 +36,12 @@ public class GitClient
 		ExecuteGitExeAndGetOutput("push", GetOAuthGitHubRepositoryLink(), branchName);
 	}
 
-	public async Task CreatePullRequestAndAddAutoMergeLabel(string branchName)
+	public async Task CreatePullRequestAndAddAutoMergeLabel(string branchName, string baseBranch)
 	{
 		var pullRequest = await client.PullRequest.Create(
 			repositoryOwner,
 			repositoryName,
-			new NewPullRequest($"Automatic pull request for branch {branchName}", branchName, "master")
+			new NewPullRequest($"Automatic pull request for branch {branchName}", branchName, baseBranch)
 		);
 
 		await client.Issue.Labels
