@@ -44,7 +44,9 @@ namespace LocalizationServiceIntegration
 
 			if (!Directory.Exists(directory))
 				Directory.CreateDirectory(directory);
-				
+			
+			Console.WriteLine(JsonConvert.SerializeObject(cyrillicLinesInFolder, Formatting.Indented));
+			
 			File.WriteAllText(exceptionsFilePath, JsonConvert.SerializeObject(cyrillicLinesInFolder, Formatting.Indented));
 		}
 		
