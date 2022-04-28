@@ -1,8 +1,7 @@
-﻿namespace LocalizationServiceIntegration
+﻿namespace LocalizationServiceIntegration;
+
+public class LocalizationKey
 {
-	public class LocalizationKey
-	{
-		public string Namespace { get; set; }
-		public string Key { get; set; }
-	}
+	public string Namespace { get; set; }
+	public string Key { get; set; }
 }

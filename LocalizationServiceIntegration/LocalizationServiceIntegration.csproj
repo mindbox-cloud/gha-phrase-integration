@@ -1,22 +1,26 @@
 <Project Sdk="Microsoft.NET.Sdk">
 
-  <PropertyGroup>
-    <OutputType>Exe</OutputType>
-    <TargetFramework>netcoreapp3.1</TargetFramework>
-    <Company>Mindbox</Company>
-    <AssemblyVersion>1.1.0.0</AssemblyVersion>
-  </PropertyGroup>
+    <PropertyGroup>
+        <AnalysisMode>AllEnabledByDefault</AnalysisMode>
+        <OutputType>Exe</OutputType>
+        <TargetFramework>net6.0</TargetFramework>
+        <Company>Mindbox</Company>
+        <AssemblyVersion>1.2.0.0</AssemblyVersion>
+        <TreatWarningsAsErrors>true</TreatWarningsAsErrors>
+    </PropertyGroup>
     
-  <ItemGroup>
-    <PackageReference Include="Mindbox.Integrations.Slack" Version="2.1.1" />
-    <PackageReference Include="Newtonsoft.Json" Version="11.0.2" />
-    <PackageReference Include="RestSharp" Version="106.3.1" />
-  </ItemGroup>
+    <ItemGroup>
+        <PackageReference Include="Flurl.Http" Version="3.2.3" />
+        <PackageReference Include="Mindbox.Integrations.Slack" Version="4.1.0" />
+        <PackageReference Include="Octokit" Version="0.50.0" />
+        <PackageReference Include="Octokit.GraphQL" Version="0.1.8-beta" />
+        <PackageReference Include="System.CommandLine" Version="2.0.0-beta3.22114.1" />
+    </ItemGroup>
 
-  <ItemGroup>
-    <None Update="LocalizationServiceIntegrationConfig.json">
-      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
-    </None>
-  </ItemGroup>
+    <ItemGroup>
+        <None Update="LocalizationServiceIntegrationConfig.json">
+            <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+        </None>
+    </ItemGroup>
 
 </Project>

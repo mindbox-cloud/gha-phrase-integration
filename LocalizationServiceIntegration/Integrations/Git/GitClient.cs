@@ -1,203 +1,157 @@
 ﻿using System;
+using System.Collections.Generic;
 using System.Diagnostics;
-using Newtonsoft.Json;
-using RestSharp;
+using System.Linq;
+using System.Threading.Tasks;
 
-namespace LocalizationServiceIntegration
+using Octokit;
+using Octokit.GraphQL;
+using Octokit.GraphQL.Model;
+
+using Connection = Octokit.GraphQL.Connection;
+using ProductHeaderValue = Octokit.ProductHeaderValue;
+
+namespace LocalizationServiceIntegration;
+
+public class GitClient
 {
-	public class GitClient
+	public const string BranchPrefix = "LocalizationPull";
+	private const string commitEmail = "action-ci@mindbox.ru";
+	private const string pullRequestVariableName = "pullRequest";
+	private readonly GitHubClient client;
+	private readonly Connection githubConnection;
+	private readonly string gitHubToken;
+	private readonly string repositoryName;
+	private readonly string repositoryOwner;
+	private readonly ICompiledQuery<string> pullRequestEnablingMutation;
+
+	public GitClient(string gitHubToken, string repositoryOwner, string repositoryName)
 	{
-		private readonly string _gitHubToken;
-		private readonly string _repositoryName;
-		private readonly RestClient _client;
+		this.gitHubToken = gitHubToken;
+		this.repositoryOwner = repositoryOwner;
+		this.repositoryName = repositoryName;
 
-		private const string RepositoryBaseUrl = "https://api.github.com/repos/";
-		private const string DefaultRepositoryName = "DirectCRM";
-
-		public GitClient(string gitHubToken, string repositoryName = null)
+		client = new GitHubClient(new ProductHeaderValue("LocalizationServiceIntegration"))
 		{
-			_gitHubToken = gitHubToken;
-			_repositoryName = repositoryName ?? DefaultRepositoryName;
+			Credentials = new Credentials(gitHubToken)
+		};
 
-			_client = new RestClient(RepositoryBaseUrl + _repositoryName);
+		githubConnection = new Connection(new Octokit.GraphQL.ProductHeaderValue("productHeaderValue"), gitHubToken);
+		pullRequestEnablingMutation = new Mutation().EnablePullRequestAutoMerge(Variable.Var(pullRequestVariableName))
+			.Select(x => x.ClientMutationId)
+			.Compile();
+	}
+
+	public void CommitAllChangesToBranchAndPush(string branchName, string message)
+	{
+		ExecuteGitExeAndGetOutput("checkout", "-b", branchName);
+		ExecuteGitExeAndGetOutput("add", "-A");
+		ExecuteGitExeAndGetOutput("config", "--global", "user.email", commitEmail);
+		ExecuteGitExeAndGetOutput("commit", "-am", message);
+		ExecuteGitExeAndGetOutput("push", GetOAuthGitHubRepositoryLink(), branchName);
+	}
+
+	public async Task CreatePullRequestWithAutoMerge(string branchName, string baseBranch)
+	{
+		var pullRequest = await client.PullRequest.Create(
+			repositoryOwner,
+			repositoryName,
+			new NewPullRequest($"Automatic pull request for branch {branchName}", branchName, baseBranch)
+		);
+
+		try
+		{
+			await client.Issue.Labels
+				.AddToIssue(repositoryOwner, repositoryName, pullRequest.Number, new[] {"Merge when ready"});
+		}
+		catch (Exception e)
+		{
+			Console.WriteLine("Failed to add label to pull request");
+			Console.WriteLine(e);
 		}
 
-		private IRestResponse ConfigureGitHubRequestAndExecute(Action<RestRequest> requestConfigurator)
+		var variables = new Dictionary<string, object>
 		{
-			var request = new RestRequest();
-			request.AddHeader("Authorization", $"token {_gitHubToken}");
-			request.AddHeader("Accept", "application/json");
-			requestConfigurator(request);
-
-			var response = _client.Execute(request);
-
-			if (!response.IsSuccessful)
-				throw new InvalidOperationException(
-					$"Github response is not OK! Response code: {response.StatusCode}, message: {response.ErrorMessage}, content: {response.Content}");
-
-			return response;
-		}
-		
-		private string ExecuteGitExeAndGetOutput(params string[] parameters)
-		{
-			var parametersString = string.Join(" ", parameters);
-			Console.WriteLine($"git {parametersString}");
-
-			var p = new Process();
-
-			p.StartInfo.UseShellExecute = false;
-			p.StartInfo.RedirectStandardOutput = true;
-			p.StartInfo.RedirectStandardError = true;
-			p.StartInfo.FileName = "git";
-			foreach (var parameter in parameters)
+			[pullRequestVariableName] = new EnablePullRequestAutoMergeInput
 			{
-				p.StartInfo.ArgumentList.Add(parameter);
+				AuthorEmail = commitEmail, PullRequestId = new ID(pullRequest.NodeId)
 			}
-		
-			p.Start();
-		
-			var output = p.StandardOutput.ReadToEnd();
-			var errors = p.StandardError.ReadToEnd();
+		};
 
-			Console.Error.WriteLine(errors);
-			Console.WriteLine(output);
-
-			p.WaitForExit();
-
-			return output;
-		}
-
-		public bool HasChanges()
+		try
 		{
-			var result = ExecuteGitExeAndGetOutput("status");
-
-			if (result.Contains("nothing to commit, working tree clean"))
-				return false;
-
-			if (result.Contains("Changes not staged for commit") || result.Contains("Untracked files"))
-				return true;
-
-			throw new InvalidOperationException($"git status resulted with some not expected output");
+			await githubConnection.Run(pullRequestEnablingMutation, variables);
 		}
-
-		public void CommitAllChangesToBranchAndPush(string branchName, string message)
+		catch (Exception e)
 		{
-			ExecuteGitExeAndGetOutput("checkout", "-b", branchName);
-			ExecuteGitExeAndGetOutput("add", "-A");
-			ExecuteGitExeAndGetOutput("config", "--global", "user.email", "action-ci@mindbox.ru");
-			ExecuteGitExeAndGetOutput("commit", "-am", message);
-			ExecuteGitExeAndGetOutput("push", GetOAuthGitHubRepositoryLink(), branchName);
+			Console.WriteLine($"Failed to enable auto merge for pull request {pullRequest.Number}");
+			Console.WriteLine(e);
 		}
+	}
 
-		private string GetOAuthGitHubRepositoryLink()
+	private static string ExecuteGitExeAndGetOutput(params string[] parameters)
+	{
+		var parametersString = string.Join(" ", parameters);
+		Console.WriteLine($"git {parametersString}");
+
+		using var p = new Process();
+
+		p.StartInfo.UseShellExecute = false;
+		p.StartInfo.RedirectStandardOutput = true;
+		p.StartInfo.RedirectStandardError = true;
+		p.StartInfo.FileName = "git";
+		foreach (var parameter in parameters)
 		{
-			return $"https://{_gitHubToken}:x-oauth-basic@github.com/{_repositoryName}.git";
+			p.StartInfo.ArgumentList.Add(parameter);
 		}
 
-		public CreatePullRequestResponse CreatePullRequest(string branchName)
-		{
-			var result = ConfigureGitHubRequestAndExecute(request =>
-			{
-				request.Resource = $"pulls";
-				request.Method = Method.POST;
+		p.Start();
 
-				var requestBody = new CreatePullRequestRequest
-				{
-					Title = $"Automatic pull request for branch {branchName}",
-					Base = "master",
-					Head = branchName
-				};
+		var output = p.StandardOutput.ReadToEnd();
+		var errors = p.StandardError.ReadToEnd();
 
-				request.Parameters.Add(new Parameter() { 
-					ContentType = "application/json", 
-					Type = ParameterType.RequestBody, 
-					Value = JsonConvert.SerializeObject(requestBody)
-				});
-			});
+		Console.Error.WriteLine(errors);
+		Console.WriteLine(output);
 
-			var response = JsonConvert.DeserializeObject<CreatePullRequestResponse>(result.Content);
+		p.WaitForExit();
 
-			return response;
-		}
+		return output;
+	}
 
-		public PullRequestStatus GetPullRequestStatus(CreatePullRequestResponse createPullRequestResponse)
-		{
-			var result = ConfigureGitHubRequestAndExecute(request =>
-			{
-				request.Resource = $"pulls/{createPullRequestResponse.Number}";
-				request.Method = Method.GET;
-			});
+	public async Task CleanStalePullRequestsAndBranches()
+	{
+		var pullRequests = await client.PullRequest.GetAllForRepository(repositoryOwner, repositoryName);
+		var pullRequestsCloseTasks = pullRequests
+			.Where(pullRequest => pullRequest.State == ItemState.Open && pullRequest.Head.Ref.StartsWith(BranchPrefix))
+			.Select(
+				pullRequest => client.PullRequest.Update(
+					repositoryOwner, repositoryName, pullRequest.Number, new PullRequestUpdate {State = ItemState.Closed}
+				)
+			);
 
-			var response = JsonConvert.DeserializeObject<GetPullRequestResponse>(result.Content);
+		await Task.WhenAll(pullRequestsCloseTasks);
 
-			Console.WriteLine(
-				$"PullRequest " +
-				$"mergable = {response.Mergeable}, " +
-				$"state = {response.State}, " +
-				$"mergableState = {response.MergeableState}");
+		var branches = await client.Repository.Branch.GetAll(repositoryOwner, repositoryName);
+		var branchesRemovalTasks = branches
+			.Where(branch => branch.Name.StartsWith(BranchPrefix))
+			.Select(branch => client.Git.Reference.Delete(repositoryOwner, repositoryName, "heads/" + branch.Name));
 
-			if (response.Mergeable == false)
-				return PullRequestStatus.Failed;
+		await Task.WhenAll(branchesRemovalTasks);
+	}
 
-			if (response.State != PullRequestState.Open)
-				return PullRequestStatus.Failed;
+	private string GetOAuthGitHubRepositoryLink() =>
+		$"https://{gitHubToken}:x-oauth-basic@github.com/{repositoryOwner}/{repositoryName}.git";
 
-			if (response.MergeableState == MergeableState.Dirty)
-				return PullRequestStatus.Failed;
+	public static bool HasChanges()
+	{
+		var result = ExecuteGitExeAndGetOutput("status");
 
-			if (response.MergeableState == MergeableState.Clean || response.MergeableState == MergeableState.Unstable)
-				return PullRequestStatus.CanBeMerged;
+		if (result.Contains("nothing to commit, working tree clean"))
+			return false;
 
-			return PullRequestStatus.InProcess;
-		}
+		if (result.Contains("Changes not staged for commit") || result.Contains("Untracked files"))
+			return true;
 
-		public void Merge(string pullRequestNumber, string sha)
-		{
-			ConfigureGitHubRequestAndExecute(request =>
-			{
-				request.Resource = $"pulls/{pullRequestNumber}/merge";
-				request.Method = Method.PUT;
-
-				var requestBody = new MergeRequest
-				{
-					CommitMessage = $"Automatic merge PR {pullRequestNumber}",
-					Sha = sha
-				};
-
-				request.Parameters.Add(new Parameter() { 
-					ContentType = "application/json", 
-					Type = ParameterType.RequestBody, 
-					Value = JsonConvert.SerializeObject(requestBody)
-				});
-			});
-		}
-
-		public void ClosePullRequest(string pullRequestNumber)
-		{
-			ConfigureGitHubRequestAndExecute(request =>
-			{
-				request.Resource = $"pulls/{pullRequestNumber}";
-				request.Method = Method.PATCH;
-
-				var requestBody = new EditPullRequestRequest
-				{
-					State = PullRequestState.Closed
-				};
-
-				request.Parameters.Add(new Parameter() { 
-					ContentType = "application/json", 
-					Type = ParameterType.RequestBody, 
-					Value = JsonConvert.SerializeObject(requestBody)
-				});
-			});
-		}
-
-		public string GetPullRequestLink(string pullRequestNumber) => 
-			$"https://github.com/{_repositoryName}/pull/{pullRequestNumber}";
-
-		public void DeleteBranch(string branchName)
-		{
-			// ExecuteGitExeAndGetOutput("push", GetOAuthGitHubRepositoryLink(), "--delete", branchName);
-		}
+		throw new InvalidOperationException("git status resulted with some not expected output");
 	}
 }

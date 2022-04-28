@@ -1,119 +1,83 @@
 ﻿using System;
 using System.Collections.Generic;
-using Newtonsoft.Json;
-using RestSharp;
+using System.Net.Http;
+using System.Threading.Tasks;
 
-namespace LocalizationServiceIntegration
+using Flurl;
+using Flurl.Http;
+
+namespace LocalizationServiceIntegration;
+
+public class PhraseAppClient : IDisposable
 {
-	public class PhraseAppClient
+	private readonly IFlurlClient client;
+	private readonly string projectId;
+
+	public PhraseAppClient(string apiKey, string projectId)
 	{
-		private readonly string _apiKey;
-		private readonly string _projectId;
-		private readonly RestClient _client;
+		this.projectId = projectId;
 
-		public PhraseAppClient(string apiKey, string projectId)
-		{
-			_apiKey = apiKey;
-			_projectId = projectId;
-
-			_client = new RestClient("https://api.phraseapp.com/");
-		}
-
-		private IRestResponse ConfigureRequestAndExecute(Action<RestRequest> requestConfigurator)
-		{
-			var request = new RestRequest();
-			request.AddHeader("Authorization", $"token {_apiKey}");
-
-			requestConfigurator(request);
-
-			var response = _client.Execute(request);
-
-			if (!response.IsSuccessful)
-				throw new InvalidOperationException(
-					$"PhraseApp response is not OK! Response code: {response.StatusCode}, message: {response.ErrorMessage}");
-
-			return response;
-		}
-
-		public string GetKeyLink(string key) => "https://phraseapp.com/accounts/mindbox-ltd/projects/mindbox/keys?utf8=✓" +
-			 $"&translation_key_search%5Bquery%5D={key}";
-
-		public void Push(
-			string localeId,
-			string tag,
-			string filePath)
-		{
-			if (localeId == null)
-				throw new ArgumentNullException(nameof(localeId));
-			if (tag == null) 
-				throw new ArgumentNullException(nameof(tag));
-			if (filePath == null) 
-				throw new ArgumentNullException(nameof(filePath));
-
-			ConfigureRequestAndExecute(request =>
+		client = new FlurlClient(
+#pragma warning disable CA2000 // Dispose objects before losing scope
+			new HttpClient
 			{
-				request.Resource = $"api/v2/projects/{_projectId}/uploads";
+				BaseAddress = new Uri("https://api.phrase.com/v2/")
+			}
+#pragma warning restore CA2000 // Dispose objects before losing scope
+		);
 
-				request.Method = Method.POST;
-
-				request
-					.WithParameter("autotranslate", "true")
-					.WithParameter("file_format", "i18next")
-					.WithParameter("skip_upload_tags", "true")
-					.WithParameter("tags", tag)
-					.WithParameter("locale_id", localeId);
-
-				request.AddFile("file", filePath);
-			});
-		}
-
-		public IReadOnlyDictionary<string, string> Pull(string localeId)
-		{
-			if (localeId == null)
-				throw new ArgumentNullException(nameof(localeId));
-
-			var response = ConfigureRequestAndExecute(request =>
-			{
-				request.Resource = $"/api/v2/projects/{_projectId}/locales/{localeId}/download";
-
-				request.Method = Method.GET;
-
-				request.WithParameter("file_format", "i18next");
-			});
-
-			var json = JsonConvert.DeserializeObject<Dictionary<string, string>>(response.Content);
-			return json;
-		}
-
-		public void RemoveKey(string key)
-		{
-			ConfigureRequestAndExecute(request =>
-			{
-				request.AddHeader("Content-Type", "application/json");
-
-				request.Resource = $"api/v2/projects/{_projectId}/keys";
-
-				var filter = new
-				{
-					q = $"name:{key}"
-				};
-
-				request.AddJsonBody(filter);
-
-				request.Method = Method.DELETE;
-			});
-		}
-
-		public void Wipe(string localeId)
-		{
-			ConfigureRequestAndExecute(request =>
-			{
-				request.AddHeader("Content-Type", "application/json");
-
-				request.Resource = $"api/v2/projects/{_projectId}/keys";
-
-				request.Method = Method.DELETE;
-			});
-		}
+		client.Headers.Add("Authorization", $"token {apiKey}");
 	}
+
+	public void Dispose() => client.Dispose();
+
+	public static string GetKeyLink(string key) => "https://phraseapp.com"
+		.AppendPathSegments("accounts", "mindbox-ltd", "projects", "mindbox", "keys")
+		.SetQueryParams(new Dictionary<string, string> {["utf8"] = "✓", ["translation_key_search[query]"] = key});
+
+	public async Task<IReadOnlyDictionary<string, string>> Pull(string localeId)
+	{
+		if (localeId == null)
+			throw new ArgumentNullException(nameof(localeId));
+
+		return await client.Request("projects", projectId, "locales", localeId, "download")
+			.SetQueryParam("file_format", "i18next")
+			.GetJsonAsync<Dictionary<string, string>>();
+	}
+
+	public async Task Push(
+		string localeId,
+		string tag,
+		string filePath)
+	{
+		if (localeId == null)
+			throw new ArgumentNullException(nameof(localeId));
+		if (tag == null)
+			throw new ArgumentNullException(nameof(tag));
+		if (filePath == null)
+			throw new ArgumentNullException(nameof(filePath));
+
+		await client.Request("projects", projectId, "uploads")
+			.SetQueryParams(
+				new
+				{
+					autotranslate = true,
+					file_format = "i18next",
+					skip_upload_tags = true,
+					tags = tag,
+					locale_id = localeId
+				}
+			).PostMultipartAsync(content => content.AddFile("file", filePath));
+	}
+
+	public async Task RemoveKey(string key) =>
+		await client.Request("projects", projectId, "keys")
+			.SendJsonAsync(
+				HttpMethod.Delete, new {q = $"name:{key}"}
+			);
+
+	public async Task Wipe() =>
+		await client.Request("projects", projectId, "keys")
+			.WithHeader("Content-Type", "application/json")
+			.DeleteAsync();
 }

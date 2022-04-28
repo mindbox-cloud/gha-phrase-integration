@@ -1,4 +1,4 @@
-FROM mcr.microsoft.com/dotnet/core/sdk:3.1 as build
+FROM mcr.microsoft.com/dotnet/sdk:6.0 as build
 
 WORKDIR /app
 COPY ["nuget.config", "./"]
@@ -14,7 +14,7 @@ RUN dotnet test
 RUN dotnet publish ./LocalizationServiceIntegration/LocalizationServiceIntegration.csproj -c Release --no-build -o ./out
 
 
-FROM mcr.microsoft.com/dotnet/core/sdk:3.1
+FROM mcr.microsoft.com/dotnet/runtime:6.0
 WORKDIR /app
 COPY --from=build /app/out .
 ENTRYPOINT ["dotnet", "/app/LocalizationServiceIntegration.dll"]

@@ -1,9 +1,16 @@
 {
-  "profiles": {
-    "LocalizationServiceIntegration": {
-      "commandName": "Project",
-      "commandLineArgs": "push",
-      "workingDirectory": "C:\\Work\\TrunkGitHub\\DirectCRM"
-    }
-  }
+	"profiles": {
+		"LocalizationServiceIntegration": {
+			"commandName": "Project",
+			"commandLineArgs": "pull",
+			"workingDirectory": "C:\\Work\\TrunkGitHub\\DirectCRM",
+			"environmentVariables": {
+				"GITHUB_REPOSITORY": "mindbox-moscow/DirectCRM",
+				"gitHubToken": "token",
+				"slackWebhookUrl": "webhook",
+				"phraseAppToken": "phraseapp",
+				"baseBranch": "master"
+			}
+		}
+	}
 }

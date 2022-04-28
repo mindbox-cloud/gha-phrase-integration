@@ -1,34 +1,26 @@
-﻿using System;
-using System.Linq;
+﻿using System.CommandLine;
+using System.Threading.Tasks;
 
-namespace LocalizationServiceIntegration
+namespace LocalizationServiceIntegration;
+
+public static class Program
 {
-	public class Program
+	private static async Task Main(string[] args)
 	{
-		private static void Main(string[] args)
+		var config = IntegrationConfiguration.Load();
+
+		var rootCommand = new RootCommand("Localization Service Integration");
+		var commands = new ExecutableCommand[]
 		{
-			if (args.Length < 1)
-			{
-				var commandsString = string.Join(", ", CommandFactory.AllowedCommandNames);
-				Console.WriteLine($"Usage: <command>. Allowed commands: {commandsString}");
+			new PullCommand(config), new PushCommand(config), new WipeCommand(config)
+		};
 
-				return;
-			};
-
-			var commandName = args[0];
-			var arguments = args.Skip(1).ToArray();
-			var config = Configuration.Load();
-
-			var command = CommandFactory.Create(commandName, config, arguments);
-			try
-			{
-				command.Execute();
-			}
-			catch (Exception ex)
-			{
-				Console.Error.WriteLine($"Exception of type {ex.GetType()} occured: {ex.Message}");
-				throw;
-			}
+		foreach (var command in commands)
+		{
+			command.SetHandler(command.Execute);
+			rootCommand.AddCommand(command);
 		}
+
+		await rootCommand.InvokeAsync(args);
 	}
 }
