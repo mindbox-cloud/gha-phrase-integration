@@ -14,6 +14,7 @@ public static class CyrillicCounter
         => Directory.EnumerateFiles(workingDirectory, "*.*", SearchOption.AllDirectories)
             .Where(file => FileRegex.IsMatch(file))
             .AsParallel()
+            .AsOrdered()
             .Select(
                 file => (RelativePath: Path.GetRelativePath(workingDirectory, file),
                     Count: CountLinesWithCyrillicInFile(file))
