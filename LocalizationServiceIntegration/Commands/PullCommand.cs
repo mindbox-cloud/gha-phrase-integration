@@ -1,6 +1,10 @@
 ﻿using System;
+using System.Collections.Generic;
 using System.IO;
+using System.Linq;
+using System.Text.RegularExpressions;
 using System.Threading;
+using Newtonsoft.Json;
 
 namespace LocalizationServiceIntegration
 {
@@ -14,26 +18,76 @@ namespace LocalizationServiceIntegration
 
 		protected override void ExecuteCore()
 		{
-			var localizationDataManager = new LocalizationDataManager(Config.GetReferenceLocale().Name, Config.WorkingDirectory);
 			Directory.SetCurrentDirectory(Config.WorkingDirectory);
-
-			foreach (var configLocale in Config.Locales)
-			{
-				PullForLocale(configLocale, localizationDataManager);
-			}
-
-			var gitClient = GetGitHubClient();
-
-			var hasChanges = gitClient.HasChanges();
-			if (!hasChanges)
+			
+			UpdateLocalizationKeysFiles();
+			UpdateCyrillicExceptionsFile();
+			
+			if (!AnyChangesWasMade())
 			{
 				Console.WriteLine("There are no changes in translations, exiting");
 				return;
 			}
 
 			var branchName = $"LocalizationPull{DateTime.Now.Ticks}";
-			gitClient.CommitAllChangesToBranchAndPush(branchName, "fix: localization (automatic integration commit)");
 
+			PushChanges(branchName);
+			CreatePullRequestAndMergeIt(branchName);
+		}
+		
+		private void UpdateCyrillicExceptionsFile()
+		{
+			var cyrillicLinesInFolder = CyrillicCounter.CountLinesWithCyrillicInFolder(Config.WorkingDirectory);
+			var exceptionsFilePath = Path.Combine(Config.WorkingDirectory, "build/cyrillic-lines-exceptions.json");
+
+			var directory = Path.GetDirectoryName(exceptionsFilePath);
+
+			if (!Directory.Exists(directory))
+				Directory.CreateDirectory(directory);
+			
+			File.WriteAllText(exceptionsFilePath, JsonConvert.SerializeObject(cyrillicLinesInFolder, Formatting.Indented));
+		}
+		
+		private void UpdateLocalizationKeysFiles()
+		{
+			var localizationDataManager = new LocalizationDataManager(Config.GetReferenceLocale().Name, Config.WorkingDirectory);
+			
+			foreach (var configLocale in Config.Locales)
+			{
+				PullForLocale(configLocale, localizationDataManager);
+			}
+		}
+		
+		private void PullForLocale(LocaleInfo locale, LocalizationDataManager localizationDataManager)
+		{
+			var client = GetPhraseAppClient();
+			
+			var sourceLocalizationData = client.Pull(locale.Id);
+			
+			foreach (var namespaceInfo in localizationDataManager.GetNamespaces(locale.Name))
+			{
+				namespaceInfo.ApplyNewTranslations(sourceLocalizationData);
+			}
+		}
+		
+		private bool AnyChangesWasMade()
+		{
+			var gitClient = GetGitHubClient();
+			
+			return gitClient.HasChanges();
+		}
+		
+		private void PushChanges(string branchName)
+		{
+			var gitHubClient = GetGitHubClient();
+			
+			gitHubClient.CommitAllChangesToBranchAndPush(branchName, "fix: localization (automatic integration commit)");
+		}
+		
+		private void CreatePullRequestAndMergeIt(string branchName)
+		{
+			var gitClient = GetGitHubClient();
+			
 			string pullRequestNumber = null;
 			var isPullRequestMerged = false;
 
@@ -105,18 +159,6 @@ namespace LocalizationServiceIntegration
 				default:
 					throw new InvalidOperationException(
 						$"Can't merge pull request {pullRequestLink} with status {pullRequestStatus}");
-			}
-		}
-
-		private void PullForLocale(LocaleInfo locale, LocalizationDataManager localizationDataManager)
-		{
-			var client = GetPhraseAppClient();
-			
-			var sourceLocalizationData = client.Pull(locale.Id);
-			
-			foreach (var namespaceInfo in localizationDataManager.GetNamespaces(locale.Name))
-			{
-				namespaceInfo.ApplyNewTranslations(sourceLocalizationData);
 			}
 		}
 	}
