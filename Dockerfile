@@ -16,5 +16,6 @@ RUN dotnet publish ./LocalizationServiceIntegration/LocalizationServiceIntegrati
 
 FROM mcr.microsoft.com/dotnet/runtime:6.0
 WORKDIR /app
+RUN apt update && apt install -y git
 COPY --from=build /app/out .
 ENTRYPOINT ["dotnet", "/app/LocalizationServiceIntegration.dll"]
