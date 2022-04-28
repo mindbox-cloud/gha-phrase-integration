@@ -3,6 +3,8 @@ using System.IO;
 using System.Linq;
 using System.Threading.Tasks;
 
+using Newtonsoft.Json;
+
 namespace LocalizationServiceIntegration;
 
 public class PullCommand : ExecutableCommand
@@ -17,13 +19,15 @@ public class PullCommand : ExecutableCommand
 
 		await GitClient.CleanStalePullRequestsAndBranches();
 
+		Directory.SetCurrentDirectory(Configuration.WorkingDirectory);
+
 		var localizationDataManager = new LocalizationDataManager(
 			Configuration.GetReferenceLocale().Name, Configuration.WorkingDirectory
 		);
 
-		Directory.SetCurrentDirectory(Configuration.WorkingDirectory);
-
 		await Task.WhenAll(Configuration.Locales.Select(locale => PullForLocale(locale, localizationDataManager)));
+
+		await UpdateCyrillicExceptionsFile();
 
 		var hasChanges = GitClient.HasChanges();
 		if (!hasChanges)
@@ -37,6 +41,19 @@ public class PullCommand : ExecutableCommand
 		GitClient.CommitAllChangesToBranchAndPush(branchName, "fix: localization (automatic integration commit)");
 
 		await GitClient.CreatePullRequestWithAutoMerge(branchName, Configuration.BaseBranch);
+	}
+
+	private async Task UpdateCyrillicExceptionsFile()
+	{
+		var cyrillicLinesInFolder = CyrillicCounter.CountLinesWithCyrillicInFolder(Configuration.WorkingDirectory);
+		var exceptionsFilePath = Path.Combine(Configuration.WorkingDirectory, "build/cyrillic-lines-exceptions.json");
+
+		var directory = Path.GetDirectoryName(exceptionsFilePath);
+
+		if (!Directory.Exists(directory))
+			Directory.CreateDirectory(directory);
+
+		await File.WriteAllTextAsync(exceptionsFilePath, JsonConvert.SerializeObject(cyrillicLinesInFolder, Formatting.Indented));
 	}
 
 	private async Task PullForLocale(LocaleInfo locale, LocalizationDataManager localizationDataManager)
