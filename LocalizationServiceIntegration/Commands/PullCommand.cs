@@ -13,6 +13,10 @@ public class PullCommand : ExecutableCommand
 
 	public override async Task Execute()
 	{
+		Console.WriteLine("Cleaning stale pull requests and branches...");
+
+		await GitClient.CleanStalePullRequestsAndBranches();
+
 		var localizationDataManager = new LocalizationDataManager(
 			Configuration.GetReferenceLocale().Name, Configuration.WorkingDirectory
 		);

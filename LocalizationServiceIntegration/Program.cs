@@ -12,7 +12,7 @@ public static class Program
 		var rootCommand = new RootCommand("Localization Service Integration");
 		var commands = new ExecutableCommand[]
 		{
-			new PullCommand(config), new PushCommand(config), new WipeCommand(config), new CleanCommand(config)
+			new PullCommand(config), new PushCommand(config), new WipeCommand(config)
 		};
 
 		foreach (var command in commands)

@@ -17,6 +17,7 @@ public class GitClient
 {
 	public const string BranchPrefix = "LocalizationPull";
 	private const string commitEmail = "action-ci@mindbox.ru";
+	private const string pullRequestVariableName = "pullRequest";
 	private readonly GitHubClient client;
 	private readonly Connection githubConnection;
 	private readonly string gitHubToken;
@@ -36,7 +37,7 @@ public class GitClient
 		};
 
 		githubConnection = new Connection(new Octokit.GraphQL.ProductHeaderValue("productHeaderValue"), gitHubToken);
-		pullRequestEnablingMutation = new Mutation().EnablePullRequestAutoMerge(Variable.Var("pullRequest"))
+		pullRequestEnablingMutation = new Mutation().EnablePullRequestAutoMerge(Variable.Var(pullRequestVariableName))
 			.Select(x => x.ClientMutationId)
 			.Compile();
 	}
@@ -71,7 +72,7 @@ public class GitClient
 
 		var variables = new Dictionary<string, object>
 		{
-			["pullRequest"] = new EnablePullRequestAutoMergeInput
+			[pullRequestVariableName] = new EnablePullRequestAutoMergeInput
 			{
 				AuthorEmail = commitEmail, PullRequestId = new ID(pullRequest.NodeId)
 			}
