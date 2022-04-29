@@ -50,10 +50,21 @@ public class PullCommand : ExecutableCommand
 
 		var directory = Path.GetDirectoryName(exceptionsFilePath);
 
+		if(File.Exists(exceptionsFilePath))
+			File.Delete(exceptionsFilePath);
+
+		if(Directory.Exists(directory) && !Directory.EnumerateFileSystemEntries(directory).Any())
+			Directory.Delete(directory);
+
+		await Task.CompletedTask;
+
+		/*
+
 		if (!Directory.Exists(directory))
 			Directory.CreateDirectory(directory);
 
 		await File.WriteAllTextAsync(exceptionsFilePath, JsonConvert.SerializeObject(cyrillicLinesInFolder, Formatting.Indented));
+		*/
 	}
 
 	private async Task PullForLocale(LocaleInfo locale, LocalizationDataManager localizationDataManager)
