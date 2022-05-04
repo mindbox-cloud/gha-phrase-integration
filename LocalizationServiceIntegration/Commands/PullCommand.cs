@@ -46,25 +46,14 @@ public class PullCommand : ExecutableCommand
 	private async Task UpdateCyrillicExceptionsFile()
 	{
 		var cyrillicLinesInFolder = CyrillicCounter.CountLinesWithCyrillicInFolder(Configuration.WorkingDirectory);
-		var exceptionsFilePath = Path.Combine(Configuration.WorkingDirectory, "build/cyrillic-lines-exceptions.json");
+		var exceptionsFilePath = Path.Combine(Configuration.WorkingDirectory, "localization/cyrillic-lines-exceptions.json");
 
 		var directory = Path.GetDirectoryName(exceptionsFilePath);
-
-		if(File.Exists(exceptionsFilePath))
-			File.Delete(exceptionsFilePath);
-
-		if(Directory.Exists(directory) && !Directory.EnumerateFileSystemEntries(directory).Any())
-			Directory.Delete(directory);
-
-		await Task.CompletedTask;
-
-		/*
 
 		if (!Directory.Exists(directory))
 			Directory.CreateDirectory(directory);
 
 		await File.WriteAllTextAsync(exceptionsFilePath, JsonConvert.SerializeObject(cyrillicLinesInFolder, Formatting.Indented));
-		*/
 	}
 
 	private async Task PullForLocale(LocaleInfo locale, LocalizationDataManager localizationDataManager)
