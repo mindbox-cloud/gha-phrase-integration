@@ -1,4 +1,5 @@
-﻿using System.CommandLine;
+﻿using System;
+using System.CommandLine;
 using System.Threading.Tasks;
 
 namespace LocalizationServiceIntegration;
@@ -7,6 +8,8 @@ public static class Program
 {
 	private static async Task Main(string[] args)
 	{
+		throw new InvalidCastException("Blah-blah");
+		/*
 		var config = IntegrationConfiguration.Load();
 
 		var rootCommand = new RootCommand("Localization Service Integration");
@@ -22,5 +25,6 @@ public static class Program
 		}
 
 		await rootCommand.InvokeAsync(args);
+		*/
 	}
 }

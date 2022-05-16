@@ -17,7 +17,7 @@ inputs:
 
 runs:
   using: 'docker'
-  image: 'docker://mindboxmoscow/phrase-integration'
+  image: 'Dockerfile'
   args:
    - ${{ inputs.command }}
   env:
