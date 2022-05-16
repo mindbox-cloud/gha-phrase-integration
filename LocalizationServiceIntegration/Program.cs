@@ -8,6 +8,8 @@ public static class Program
 {
 	private static async Task Main(string[] args)
 	{
+		await Task.Yield();
+
 		throw new InvalidCastException("Blah-blah");
 		/*
 		var config = IntegrationConfiguration.Load();
