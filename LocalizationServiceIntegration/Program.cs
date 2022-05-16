@@ -10,7 +10,7 @@ public static class Program
 	{
 		await Task.Yield();
 
-		throw new InvalidCastException("Blah-blah");
+		throw new InvalidOperationException("Blah-blah");
 		/*
 		var config = IntegrationConfiguration.Load();
 
